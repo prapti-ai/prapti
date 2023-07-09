@@ -16,6 +16,7 @@ authors = [
 keywords = ["ai", "ChatGPT", "markdown"]
 classifiers = [
   "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
   "Intended Audience :: End Users/Desktop",
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
