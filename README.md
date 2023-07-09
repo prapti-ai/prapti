@@ -47,7 +47,7 @@ export OPENAI_API_KEY=your-key-goes-here
 
 To select a non-default organisation, use the `OPENAI_ORGANIZATION` environment variable.
 
-To use a alternate OpenAI API key and/or organization specifically with prapti you can set `PRAPTI_OPENAI_API_KEY` and/or `PRAPTI_OPENAI_ORGANIZATION`. If set, prapti will use these environment variables in preference to `OPENAI_API_KEY` and `OPENAI_ORGANIZATION`.
+To use an alternate OpenAI API key and/or organization specifically with prapti you can set `PRAPTI_OPENAI_API_KEY` and/or `PRAPTI_OPENAI_ORGANIZATION`. If set, prapti will use these environment variables in preference to `OPENAI_API_KEY` and `OPENAI_ORGANIZATION`.
 
 [Click here for local LLM configuration](docs/local_llms.md)
 
