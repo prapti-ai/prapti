@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prapti"
+version = "0.0.1"
+description = "Converse with LLMs directly in markdown files"
+requires-python = ">=3.10"
+license = {text = "MIT License"}
+readme = "README.md"
+authors = [
+  {name = "Ross Bencina"},
+  {name = "Scot Brewer"},
+]
+keywords = ["ai", "ChatGPT", "markdown"]
+classifiers = [
+  "Programming Language :: Python",
+  "Intended Audience :: End Users/Desktop",
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Text Processing :: Markup :: Markdown"
+]
+dependencies = [
+    "openai >= 0.27.6",
+    "tiktoken >= 0.4.0",
+    "gpt4all >= 1.0.2"
+]
+
+[project.urls]
+Homepage = "https://github.com/prapti-ai/prapti"
+Documentation = "https://github.com/prapti-ai/prapti"
+Repository = "https://github.com/prapti-ai/prapti.git"
+
+[project.scripts]
+prapti = "prapti.tool:main"
+
+[tool.setuptools]
+include-package-data = true # ensure that template markdown files are included
+
+[tool.setuptools.packages]
+find = {} # default project directory scan
+
+# Why no setup.py?
+# pip editable installs without a setup.py require pip v21.1 or later.
+# pip v21.1 was released April 1, 2021. Python 3.10.0 was released October 4, 2021
+# We require python 3.10, thus we assume you have pip >= v21.1

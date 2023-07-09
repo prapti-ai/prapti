@@ -1,0 +1,5 @@
+prune *
+graft prapti
+graft docs
+graft tests
+global-include *.md
