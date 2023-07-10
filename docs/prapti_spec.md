@@ -10,7 +10,7 @@ Prapti aims to be 100% compatible with standard [CommonMark](https://commonmark.
 
 Prapti treats a markdown document as a sequence of "messages". Messages are the fundamental units of interaction in Prapti and are used to represent an exchange of information in a conversation.
 
-Each message is a sequence of text spans interspersed with configuration lines. The text spans form the content of the message, while the configuration lines provide instructions for processing the message.
+Each message is a sequence of text spans interspersed with configuration lines. The text spans form the content of the message, while the configuration lines provide instructions for configuring Prapti, or for injecting content into the document.
 
 Messages are delimited by special level-3 headings, referred to as "message headings". Each message starts with a message heading and continues until the next message heading, or until the end of the document if there is no subsequent message heading.
 
