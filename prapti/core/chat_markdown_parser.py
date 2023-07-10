@@ -11,7 +11,7 @@ message_delimiter_regex = re.compile(r"^[ ]{0,3}###\s+(\/\/)?\s*@([\w]+)(?:\/([\
 
 # match single-line "commands" which are lines starting with % (optionally prefixed with >)
 # TODO: don't match commands inside <!-- --> comments or inside fenced blocks
-command_line_regex = re.compile(r"^(?:\>\s*)?(\/\/)?\s*%\s*(.*)\n")
+command_line_regex = re.compile(r"^(?:[ ]{0,3}\>\s*)?(\/\/)?\s*%\s*(.*)\n")
 
 def parse_messages(lines: list[str]) -> list[Message]:
     """partition lines of a chat markdown document into a sequence of messages."""
