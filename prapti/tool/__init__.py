@@ -66,7 +66,7 @@ def default_load_config_files(state: ExecutionState):
     """
     found_config_file = False
 
-    # user config file i.e. ~/.config/prapti/config.md
+    # user config file i.e. ~/.prapti/config.md
     found_config_file = load_config_file(pathlib.Path.home() / '.prapti' / 'config.md', state)
 
     # in-tree `.prapticonfig.md` files:
