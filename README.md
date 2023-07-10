@@ -13,6 +13,8 @@ Prapti is a tool for prompting Large Language Models (LLMs) with an editable his
 - Extensible with plugins (responders, commands and processing hooks)
 - Support for OpenAI, GPT4All (experimental), or add your favourite LLM back-end by implementing a Responder plugin.
 
+Using prapti is an interactive experience, but you can get an idea of what it might be like to use prapti by reading [your first prapti conversation](start_here.md).
+
 ## Installation and Setup
 
 Prapti requires Python 3.10 or newer.
