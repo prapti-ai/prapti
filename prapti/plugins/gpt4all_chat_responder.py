@@ -10,7 +10,7 @@
     have no hope of being correlated with the way the model was trained.
 
     We would like inference to run in a persistent process, not in the
-    transient prapti tool invocation. Consider setting up something using Pyro4
+    transient prapti tool invocation. Consider setting up something using Pyro5
 """
 # ----------------------------------------------------------------------------
 # /// DANGER -- UNDER CONSTRUCTION ///////////////////////////////////////////
@@ -101,6 +101,7 @@ class GPT4AllChatResponder(Responder):
                                 model_type = None, # currently unused
                                 allow_download = False,
                                 n_threads = config.n_threads if config.n_threads > 0 else None)
+
         generate_args = generate_args_from(config)
         print(f"gpt4all.chat: {generate_args = }")
         if config.streaming:
