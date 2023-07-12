@@ -55,29 +55,31 @@ To use an alternate OpenAI API key and/or organization specifically with prapti 
 
 ### 3. Check that the `prapti` tool runs manually in your terminal
 
-First, create a test markdown file with `.md` extension or work with an existing markdown file such as `chat-example.md`
+First, create a new markdown file with `.md` extension. You can name it anything you like, for example `test-chat.md`.
 
-Edit the file with a trailing user prompt like this:
+Edit the file so that the final lines consist of a user prompt. A user prompt is a message that you, as the user, write to the LLM. It should look like this:
 
-```markdown:chat-example.md
+```markdown:test-chat.md
 ### @user:
 
 Write your prompt here.
 ```
 
-Then run the script to generate a new assistant response:
+Then run `prapti` in the terminal to generate a new assistant response:
 
 ```
-prapti chat-example.md
+prapti test-chat.md
 ```
 
-### 4. Set up a keybinding to run `prapti` in your editor
+After running `prapti`, refresh or reload the `test-chat.md` file. You should see that prapti has appended an assistant response to the file. With this test, you've confirmed that prapti works correctly in your terminal. The next step is to set up a convenient way to run prapti, such as a hot-key, for a smoother conversation flow with the LLM.
 
-Bind the key combination `Ctrl-Enter` to save the file and then run prapti (only when editing markdown files).
+### 4. Set up a keybinding to run `prapti` in your text editor
+
+Choose a key combination (e.g. `Ctrl-Enter`) in your preferred text editor, and configure it to save the current file and run `prapti`. This keybinding should be set to function only when you're editing markdown files.
 
 Below are the instructions for VSCode. If you use another editor please contribute instructions.
 
-#### VSCode instructions
+#### VSCode
 
 > NOTE: This key binding runs `prapti` in the active VSCode terminal window. So make sure you have the terminal open with the `prapti` command available.
 

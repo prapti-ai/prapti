@@ -4,6 +4,44 @@ This file documents optional editor setup that may improve your Prapti experienc
 
 ## VSCode
 
+Here are two ways to streamline creation of markdown files.
+
+To add keyboard shortcuts use the *Quick Open* menu to run:
+
+> Preferences: Open Keyboard Shortcuts (JSON)
+
+### Keyboard shortcut to create an untitled markdown file and immediately show the save-as dialog box
+
+```json
+{
+    "key": "ctrl+shift+alt+enter",
+    "command": "runCommands",
+    "args": {
+        "commands": [
+            {
+                "command": "workbench.action.files.newUntitledFile",
+                "args": {
+                    "languageId": "markdown"
+                }
+            },
+            "workbench.action.files.save",
+        ]
+    }
+},
+```
+
+### Keyboard shortcut to create a new file, in a selected folder
+
+To use this shortcut first click on a directory in the VSCode File Explorer. Now type `Ctrl+n`. Now type the name of the file to create and hit `Enter` the file should open for editing and you can start using prapti. (For use with prapti the file name should end in `.md`.)
+
+```json
+{
+    "key": "ctrl+n",
+    "command": "workbench.files.action.createFileFromExplorer",
+    "when": "explorerViewletFocus && explorerViewletVisible && !inputFocus"
+},
+```
+
 The tweaks below provide additional visual cues in the text editor when editing markdown that contains Prapti message headings.
 
 ### Highlight Message Headings in Markdown Files
