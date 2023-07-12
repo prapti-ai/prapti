@@ -110,7 +110,7 @@ then add the following binding to the opened `keybindings.json` file.
 
 Now, when editing your markdown file you should be able to hit `Ctrl-Enter` to get a response from the LLM. You can watch the terminal window for progress. Be patient, GPT4 can take 30 seconds to generate a full response.
 
-See [our documentation](docs/editor_tweaks.md) for setting up syntax highlighting and chat-aware markdown display.
+See [our documentation](docs/editor_tweaks.md) for optional text editor setup to streamline your experience.
 
 ## License
 
