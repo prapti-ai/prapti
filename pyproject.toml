@@ -11,7 +11,7 @@ license = {text = "MIT License"}
 readme = "README.md"
 authors = [
   {name = "Ross Bencina"},
-  {name = "Scot Brewer"},
+  {name = "Scott Brewer"},
 ]
 keywords = ["ai", "ChatGPT", "markdown"]
 classifiers = [
