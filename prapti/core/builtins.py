@@ -25,14 +25,14 @@ import prapti.plugins.openai_chat_responder
 import prapti.plugins.gpt4all_chat_responder
 import prapti.plugins.experimental_gitlog
 import prapti.plugins.include
-import prapti.plugins.test_actions
+import prapti.plugins.prapti_test_actions
 import prapti.plugins.experimental_agents
 plugins = [
     prapti.plugins.openai_chat_responder.prapti_plugin,
     prapti.plugins.gpt4all_chat_responder.prapti_plugin,
     prapti.plugins.experimental_gitlog.prapti_plugin,
     prapti.plugins.include.prapti_plugin,
-    prapti.plugins.test_actions.prapti_plugin,
+    prapti.plugins.prapti_test_actions.prapti_plugin,
     prapti.plugins.experimental_agents.prapti_plugin
 ]
 plugins_dict = {plugin.name : plugin for plugin in plugins}
