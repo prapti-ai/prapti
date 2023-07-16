@@ -1,0 +1,31 @@
+name: Run Python tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ${{ matrix.os }}
+    environment: test_environment
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install package and dependencies
+        run: pip install .[test]
+      - name: Run Prapti tests (in-tree prapti package, with link checks)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python -m pytest --check-links .
+      - name: Run Prapti tests (installed prapti package)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: pytest .
+      - name: Uninstall package
+        run: pip uninstall -y prapti

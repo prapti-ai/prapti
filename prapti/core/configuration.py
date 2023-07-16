@@ -26,6 +26,7 @@ class RootConfiguration:
     """The root of the configuration tree"""
     config_root: bool = False # halt in-tree configuration file loading when true
     dry_run: bool = False # simulate LLM responses. disable side-effects (plugin specific)
+    strict: bool = False # fail if errors are encountered (if strict is False, errors will be reported but prapti will try to continue where ever possible)
 
     plugins: PluginsConfiguration = field(default_factory=PluginsConfiguration)
 
