@@ -29,6 +29,12 @@ dependencies = [
     "gpt4all >= 1.0.2"
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4",
+    "pytest-check-links>=0.9"
+]
+
 [project.urls]
 Homepage = "https://github.com/prapti-ai/prapti"
 Documentation = "https://github.com/prapti-ai/prapti"
