@@ -27,3 +27,5 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: pytest .
+      - name: Uninstall package
+        run: pip uninstall -y prapti
