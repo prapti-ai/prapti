@@ -26,6 +26,7 @@ def make_argument_parser():
     # create and initialize an ArgumentParser
     result = argparse.ArgumentParser(description="Prapti markdown chat")
     result.add_argument("--dry-run", help="prepare the API request then bail", action="store_true")
+    result.add_argument("--strict", help="fail if errors are encountered, do not attempt error recovery", action="store_true")
     result.add_argument("--no-default-config", help="disable default config file search", action="store_true")
     result.add_argument("--config-file", help="specify additional config file(s)", required=False, default=[], action="append")
     # Positional argument for the filename
@@ -121,6 +122,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     state._core_state = core_state
     builtin_actions.merge_into(core_state.actions)
     state.root_config.dry_run = command_line_args.dry_run
+    state.root_config.strict = command_line_args.strict
 
     # load config files
     if not command_line_args.no_default_config:

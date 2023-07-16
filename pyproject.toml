@@ -47,3 +47,9 @@ find = {} # default project directory scan
 # pip editable installs without a setup.py require pip v21.1 or later.
 # pip v21.1 was released April 1, 2021. Python 3.10.0 was released October 4, 2021
 # We require python 3.10, thus we assume you have pip >= v21.1
+
+[tool.pytest.ini_options]
+minversion = "7.4"
+testpaths = [
+    "tests"
+]
