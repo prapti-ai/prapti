@@ -5,7 +5,7 @@ def pytest_generate_tests(metafunc):
     if "markdown_file_path" in metafunc.fixturenames:
         # fixture markdown_file_path: all non-temporary markdown files in the project, as pathlib.Path objects
         rootpath = metafunc.config.rootpath
-        paths = [p for p in rootpath.rglob("*.md") if (".pytest_cache" not in p.parts and "_pytest_tmp" not in p.name)]
+        paths = [p for p in rootpath.rglob("*.md") if (".pytest_cache" not in p.parts and "build" not in p.parts and "_pytest_tmp" not in p.name)]
         metafunc.parametrize("markdown_file_path", paths, ids=lambda p: str(p.relative_to(rootpath)))
 
 @pytest.fixture(scope="function") # provide a fresh temporary copy for each test
