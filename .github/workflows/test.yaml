@@ -20,6 +20,10 @@ jobs:
       - name: Install package and dependencies
         run: pip install .[test]
       - name: Run Prapti tests (in-tree prapti package, with link checks)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: python -m pytest --check-links .
       - name: Run Prapti tests (installed prapti package)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: pytest .
