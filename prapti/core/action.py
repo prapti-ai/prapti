@@ -6,15 +6,27 @@ from typing import Callable, Any
 from collections import defaultdict
 
 from .command_message import Message
+from .execution_state import ExecutionState
+from .configuration import RootConfiguration
 from .source_location import SourceLocation
+from .logger import DiagnosticsLogger
+
+@dataclass
+class ActionContext:
+    state: ExecutionState
+    root_config: RootConfiguration
+    plugin_config: Any
+    source_loc: SourceLocation
+    log: DiagnosticsLogger
 
 @dataclass
 class Action:
     # name can be fully qualified e.g. 'a.b.c' or unqualified eg 'c'
     qualified_name: str
     unqualified_name: str
-    function: Callable[[str, str, 'ExecutionState'], None|str|Message]
+    function: Callable[[str, str, ActionContext], None|str|Message]
     exclamation_only: bool = False # !-only commands may only appear in markdown with the ! prefix
+    plugin_config: Any|None = None
 
 class ActionNamespace:
     def __init__(self):
@@ -25,7 +37,7 @@ class ActionNamespace:
         for k,v in self._actions.items():
             other._actions[k] += v
 
-    def _add_action(self, raw_qualified_name: str, function: Callable[[str, str, 'ExecutionState'], None|str|Message], exclamation_only:bool|None=None):
+    def _add_action(self, raw_qualified_name: str, function: Callable[[str, str, ActionContext], None|str|Message], exclamation_only:bool|None=None):
         qualified_name = raw_qualified_name.lstrip("!")
         unqualified_name = qualified_name.split(".")[-1]
 
@@ -44,6 +56,11 @@ class ActionNamespace:
             self._add_action(raw_qualified_name=raw_qualified_name, function=func, exclamation_only=exclamation_only)
             return func
         return decorator
+
+    def set_plugin_config(self, plugin_config: Any):
+        for _,v in self._actions.items():
+            for action in v:
+                action.plugin_config = plugin_config
 
     def lookup_action(self, name: str) -> list[Action]:
         name_components = name.split('.')

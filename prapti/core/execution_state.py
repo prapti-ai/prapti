@@ -15,7 +15,6 @@ class ExecutionState:
     """
     log: DiagnosticsLogger
     file_name: pathlib.Path
-    active_file_path: pathlib.Path|None = None
     root_config: RootConfiguration = field(default_factory=RootConfiguration)
     message_sequence: list[Message] = field(default_factory=list)
     responses: list[Message] = field(default_factory=list)

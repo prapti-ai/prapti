@@ -51,14 +51,11 @@ def load_config_file(config_path: pathlib.Path, state: ExecutionState) -> bool:
     if config_path.is_file():
         state.log.detail("loading-config", f"loading configuration file", config_path)
         try:
-            state.active_file_path = config_path
             config_file_lines = config_path.read_text(encoding="utf-8").splitlines(keepends=True)
             parse_messages_and_interpret_commands(config_file_lines, config_path, state)
         except Exception as e:
             state.log.error("config-file-exception", f"exception while reading configuration file: {repr(e)}", config_path)
             state.log.logger.debug(e, exc_info=True)
-        finally:
-            state.active_file_path = None
         return True
     return False
 
@@ -84,7 +81,7 @@ def default_load_config_files(state: ExecutionState):
 
     # if no config file is present, use fallback config
     if not found_config_file:
-        state.log.detail("loading-fallback-config", f"loading fallback configuration")
+        state.log.detail("loading-fallback-config", f"loading fallback configuration", state.file_name)
         parse_messages_and_interpret_commands(fallback_config_file_data.splitlines(keepends=True), pathlib.Path("<fallback-config>"), state)
 
 def find_final_prompt_message(messages: list[Message]) -> Message|None:
@@ -138,7 +135,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     # process input file, generate response
     with open(state.file_name, "rt+", encoding="utf-8") as file:
         state.log.detail("loading-input", f"loading input file", state.file_name)
-        state.active_file_path = state.file_name
         lines = file.readlines()
         # early-out if the input file is effectively empty
         if not lines or all(not line.strip() for line in lines): # if file is effectively empty

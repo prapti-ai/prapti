@@ -10,28 +10,31 @@ from ._core_execution_state import get_private_core_state
 from .execution_state import ExecutionState
 from .configuration import assign_configuration_field
 from .command_message import Command, Message
-from .action import Action
+from .action import Action, ActionContext
+from .source_location import SourceLocation
 
 def _join_alternatives(alternatives: list[str]):
     return ", ".join(alternatives[:-1]) + " or " + alternatives[-1]
 
-def run_action(has_exclamation: bool, action_name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
+def run_action(has_exclamation: bool, action_name: str, raw_args: str, source_loc: SourceLocation, state: ExecutionState) -> None|str|Message:
     core_state = get_private_core_state(state)
-    #state.log.debug(f"running action '{'!' if has_exclamation else ''}{action_name}' with raw args '{raw_args}'")
+    #state.log.debug(f"running action '{'!' if has_exclamation else ''}{action_name}' with raw args '{raw_args}'", source_loc)
 
     matches: list[Action] = core_state.actions.lookup_action(action_name)
     match len(matches):
         case 0:
-            state.log.error("action-not-found", f"could not find action {action_name}")
+            state.log.error("action-not-found", f"could not find action {action_name}", source_loc)
         case 1:
             action = matches[0]
             if action.exclamation_only and not has_exclamation:
-                state.log.error("excl-only-action-without-excl", f"action '{action_name}' is !-only but written without a '!'")
+                state.log.error("excl-only-action-without-excl", f"action '{action_name}' is !-only but written without a '!'", source_loc)
                 return None
-            return action.function(action_name, raw_args, state)
+
+            context = ActionContext(state=state, root_config=state.root_config, plugin_config=action.plugin_config, source_loc=source_loc, log=state.log)
+            return action.function(action_name, raw_args, context)
         case _:
             alternatives = _join_alternatives([action.qualified_name for action in matches])
-            state.log.error("ambiguous-action-name", f"action name '{action_name}' is ambiguous, did you mean: {alternatives}")
+            state.log.error("ambiguous-action-name", f"action name '{action_name}' is ambiguous, did you mean: {alternatives}", source_loc)
     return None
 
 # process '%' commands -------------------------------------------------------
@@ -49,7 +52,7 @@ command_regex = re.compile(r"^(!)?\s*([\w\-_./\\]+)(?:\s*(=)|\s+|$)(.*)")
 #   or more whitespace characters (`\s+`) or the end of input(`$`). The `=` is captured as a separate group.
 # - `(.*)` matches any remaining characters after the command, if any.
 
-def _interpret_command(command_text: str, is_final_message: bool, state: ExecutionState) -> None|str|Message:
+def _interpret_command(command_text: str, is_final_message: bool, source_loc: SourceLocation, state: ExecutionState) -> None|str|Message:
     """
     Interpret one command
 
@@ -66,20 +69,20 @@ def _interpret_command(command_text: str, is_final_message: bool, state: Executi
         name = match.group(2)
         equals_sign = match.group(3)
         RHS = match.group(4).strip() if match.group(4) else ""
-        #state.log.debug(f"{has_exclamation = }, {name = }, {equals_sign = }, {RHS = }")
+        #state.log.debug(f"{has_exclamation = }, {name = }, {equals_sign = }, {RHS = }", source_loc)
 
         if not has_exclamation or (has_exclamation and is_final_message): # has_exclamation commands only run in final message
             if equals_sign:
                 # assignment:
                 if len(RHS) == 0: # missing right hand side of assignment
-                    state.log.warning("skiping-empty-assignment", f"skipping assignment command with no right-hand-side '{command_text}'")
+                    state.log.warning("skiping-empty-assignment", f"skipping assignment command with no right-hand-side '{command_text}'", source_loc)
                 else:
-                    assign_configuration_field(state.root_config, name, RHS, state.log)
+                    assign_configuration_field(state.root_config, name, RHS, source_loc, state.log)
             else:
                 # action:
-                result = run_action(has_exclamation, name, RHS, state)
+                result = run_action(has_exclamation, name, RHS, source_loc, state)
     else:
-        state.log.warning("unknown-command", f"warning: could not interpret command '{command_text}'")
+        state.log.warning("unknown-command", f"warning: could not interpret command '{command_text}'", source_loc)
     return result
 
 def interpret_commands(message_sequence: list[Message], state: ExecutionState) -> None:
@@ -90,4 +93,4 @@ def interpret_commands(message_sequence: list[Message], state: ExecutionState) -
             is_final_message = message is final_message
             for item in message.content:
                 if isinstance(item, Command) and item.is_enabled():
-                    item.result = _interpret_command(command_text=item.text, is_final_message=is_final_message, state=state)
+                    item.result = _interpret_command(command_text=item.text, is_final_message=is_final_message, source_loc=item.source_loc, state=state)

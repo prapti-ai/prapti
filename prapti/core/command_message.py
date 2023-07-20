@@ -4,7 +4,7 @@
     Abstraction of a markdown chat document as a sequence of
     chat Messages, each of which may contain interjecting Commands.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 from .source_location import SourceLocation
 
@@ -13,7 +13,7 @@ class Command:
     text: str # begins with the first non-whitespace character after '%', does not include trailing '\n'
     _is_enabled: bool = True
     result: str|Any|None = None # str|'Message'|None
-    source_loc: SourceLocation|None = None
+    source_loc: SourceLocation = field(default_factory=SourceLocation)
 
     def is_enabled(self):
         return self._is_enabled
@@ -30,7 +30,7 @@ class Message:
         # ^^^ allow embedded inline commands e.g. for file inclusion
         # also allow "None" items so that command outputs can be re-written to None without otherwise modifying the list
     _is_enabled: bool = True
-    source_loc: SourceLocation|None = None
+    source_loc: SourceLocation = field(default_factory=SourceLocation)
 
     def is_enabled(self) -> bool:
         return self._is_enabled
