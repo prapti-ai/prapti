@@ -14,17 +14,17 @@ _actions: ActionNamespace = ActionNamespace()
 
 @_actions.add_action("test.test")
 def test_test(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
-    print(f"test.test {name = }, {raw_args = }, {state.root_config = }")
+    state.log.debug(f"test.test {name = }, {raw_args = }, {state.root_config = }")
     return None
 
 @_actions.add_action("teest.test")
 def teest_test(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
-    print(f"teest.test {name = }, {raw_args = }, {state.root_config = }")
+    state.log.debug(f"teest.test {name = }, {raw_args = }, {state.root_config = }")
     return None
 
 @_actions.add_action("teast.test")
 def teast_test(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
-    print(f"teast.test {name = }, {raw_args = }, {state.root_config = }")
+    state.log.debug(f"teast.test {name = }, {raw_args = }, {state.root_config = }")
     return None
 
 class TestActionsPlugin(Plugin):

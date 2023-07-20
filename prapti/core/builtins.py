@@ -1,8 +1,6 @@
 """
     Builtin actions.
 """
-import traceback
-
 from ._core_execution_state import get_private_core_state
 from .execution_state import ExecutionState
 from .configuration import EmptyPluginConfiguration, EmptyResponderConfiguration
@@ -59,9 +57,8 @@ def load_plugin(plugin, state: ExecutionState):
             plugin_hooks.on_plugin_loaded(hooks_context)
             core_state.hooks_distributor.add_hooks(hooks_context)
     except Exception as e:
-        print(f"warning: exception caught while loading plugin {plugin.name}: {e}")
-        traceback.print_exc()
-        print("---")
+        state.log.error("load-plugin-exception", f"exception while loading plugin {plugin.name}: {repr(e)}", state.active_file_path)
+        state.log.logger.debug(e, exc_info=True)
 
 @builtin_actions.add_action("plugins.load")
 def plugins_load(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
@@ -72,7 +69,7 @@ def plugins_load(name: str, raw_args: str, state: ExecutionState) -> None|str|Me
         if plugin not in core_state.loaded_plugins:
             load_plugin(plugin, state)
     else:
-        print(f"warning: couldn't load plugin '{plugin_name}'. not found.")
+        state.log.warning("plugin-not-found", f"couldn't load plugin '{plugin_name}'. not found.")
     return None
 
 @builtin_actions.add_action("!plugins.list")
@@ -109,14 +106,14 @@ def responder_new(name: str, raw_args: str, state: ExecutionState) -> None|str|M
                 plugin_config = getattr(state.root_config.plugins, plugin_name, None)
                 responder_context = ResponderContext(plugin_name=plugin_name,
                                                      root_config=state.root_config, plugin_config=plugin_config, responder_config=EmptyResponderConfiguration(),
-                                                     responder_name=responder_name, responder=responder)
+                                                     responder_name=responder_name, responder=responder, log=state.log)
                 responder_context.responder_config = responder.construct_configuration(responder_context) or responder_context.responder_config
                 core_state.responder_contexts[responder_name] = responder_context
                 setattr(state.root_config.responders, responder_name, responder_context.responder_config)
             else:
-                print("warning: '{plugin_name}' did not construct responder.")
+                state.log.error("failed-responder-new", "responder.new: '{plugin_name}' did not construct responder.")
     else:
-        print("warning: couldn't locate responder provider plugin '{plugin_name}'. not found.")
+        state.log.error("plugin-not-found", "couldn't locate responder provider plugin '{plugin_name}'. not found.")
 
 @builtin_actions.add_action("responder.push")
 def responder_push(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:

@@ -12,7 +12,6 @@ def test_dry_run_tool(temp_markdown_file_path, monkeypatch):
     it may fail for the expected reason, or for an unrelated reason. This test
     can not tell the difference.
     """
-    print(f">>> {temp_markdown_file_path}")
     monkeypatch.setattr("sys.argv", ["prapti", "--dry-run", "--strict", str(temp_markdown_file_path)])
 
     import prapti.tool

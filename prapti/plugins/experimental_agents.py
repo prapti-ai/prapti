@@ -68,7 +68,7 @@ def discuss(name: str, raw_args: str, state: ExecutionState) -> None|str|Message
     """
     args = raw_args.split()
     if len(args) < 1:
-        print("usage: agents.discuss n [agent_name ...]")
+        state.log.info("agents.discuss-usage", "usage: agents.discuss n [agent_name ...]")
         return None
 
     # FIXME would be nice to have an action context with access to the plugin config.

@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 from ..core.plugin import Plugin
 from ..core.hooks import Hooks, HooksContext
+from ..core.logger import DiagnosticsLogger
 
 # ----------------------------------------------------------------------------
 # pathlib.Path.copy()
@@ -26,18 +27,33 @@ def _Path_copy(self: pathlib.Path, target: pathlib.Path) -> None:
 pathlib.Path.copy = _Path_copy
 # ----------------------------------------------------------------------------
 
-def run_command(command: str, cwd: pathlib.Path, print_output=True) -> tuple[int, str]:
-    command = shlex.split(command)
-    process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8', cwd=cwd, check=False)
-    print("command:", command, "cwd:", cwd)
-    print("command output: --------------------------------")
+#https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def run_command(command: str, cwd: pathlib.Path, log: DiagnosticsLogger, print_output=True) -> tuple[int, str]:
+    args = shlex.split(command)
+    process = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8', cwd=cwd, check=False)
+    log.debug(f"run_command: {args = }, {cwd = }")
+    returncode = process.returncode
+    color = bcolors.OKGREEN if returncode == 0 else bcolors.FAIL
     if print_output:
-        print(process.stdout)
+        log.debug(f"{color}{returncode = }, command output: --------------------------------\n{process.stdout}{bcolors.ENDC}")
+    else:
+        log.debug(f"{color}{returncode = }, <command output omitted>{bcolors.ENDC}")
     return process.returncode, process.stdout # merged stdout and stderr
 
-def get_git_revision_hashes(filename: str, cwd: pathlib.Path) -> list[str]:
+def get_git_revision_hashes(filename: str, cwd: pathlib.Path, log: DiagnosticsLogger) -> list[str]:
     # return revision hashes ordered earliest to latest
-    ret, output = run_command(f"git log --follow --oneline -- '{filename}'", cwd)
+    ret, output = run_command(f"git log --follow --oneline -- '{filename}'", cwd, log)
     if ret == 0: # success
         lines = output.splitlines()
         return [elems.split()[0] for elems in lines if elems.strip()]
@@ -49,7 +65,7 @@ class PrefixData:
     prefix: str # contents of "prefix" file at revision given by hash
     remainder: str # contents of the current revision following the prefix
 
-def find_most_recent_proper_prefix(filename: str, hashes: list[str], cwd: pathlib.Path):
+def find_most_recent_proper_prefix(filename: str, hashes: list[str], cwd: pathlib.Path, log: DiagnosticsLogger):
     """return the hash of the most recent revision that is a prefix of the file data
     this corresponds to a branch point. return None if no branch point was found or
     if the tip is a proper prefix"""
@@ -57,11 +73,11 @@ def find_most_recent_proper_prefix(filename: str, hashes: list[str], cwd: pathli
         return None
     current_file_data = (cwd / filename).read_text(encoding="utf-8")
     for hash_ in hashes: # searching from oldest to newest
-        ret, earlier_file_data = run_command(f"git show '{hash_}:{filename}'", cwd, print_output=False) # read file data straight from git stdout
+        ret, earlier_file_data = run_command(f"git show '{hash_}:{filename}'", cwd, log, print_output=False) # read file data straight from git stdout
         assert ret == 0
         if current_file_data.startswith(earlier_file_data) or len(earlier_file_data) == 0:
             # we found a prefix
-            print(f"found prefix at {hash_}")
+            log.debug(f"found prefix at {hash_}")
             return PrefixData(hash=hash_, prefix=earlier_file_data, remainder=current_file_data[len(earlier_file_data):])
     return None
 
@@ -94,9 +110,10 @@ class GitlogHooks(Hooks):
         called when: the %plugins.load command loads the plugin.
         i.e. during command execution but before any response generation.
         """
-        print("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
-        print("prapti.experimental.gitlog: on_plugin_loaded")
-        print(f"{context.state.file_name = }")
+        log = context.state.log
+        log.debug("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
+        log.debug("prapti.experimental.gitlog: on_plugin_loaded")
+        log.debug(f"{context.state.file_name = }")
         file_path = context.state.file_name.resolve()
         main_worktree_dir = file_path.parent
         shadow_worktree_dir = main_worktree_dir / ".prapti_shadow_worktree"
@@ -118,15 +135,15 @@ class GitlogHooks(Hooks):
 # """
             # need git 2.42 https://stackoverflow.com/questions/53005845/checking-out-orphan-branch-in-new-work-tree/76552472#76552472
             # to use the --orphan flag, which will remove the need for +++ above
-            run_command(f"git worktree add .prapti_shadow_worktree --detach", main_worktree_dir)
+            run_command(f"git worktree add .prapti_shadow_worktree --detach", main_worktree_dir, log)
 
         if not gitignore_file.exists():
             gitignore_file.write_text(".prapti_shadow_worktree\n.prapticonfig\nprapti_reset\nprapti_reset.bat\n.gitignore", encoding="utf-8")
 
-        print(f"{file_path.name = }, {main_worktree_dir = }")
-        hashes = get_git_revision_hashes(file_path.name, main_worktree_dir)
-        print(hashes)
-        potential_branch_point = find_most_recent_proper_prefix(file_path.name, hashes, main_worktree_dir)
+        log.debug(f"{file_path.name = }, {main_worktree_dir = }")
+        hashes = get_git_revision_hashes(file_path.name, main_worktree_dir, log)
+        log.debug(f"{hashes = }")
+        potential_branch_point = find_most_recent_proper_prefix(file_path.name, hashes, main_worktree_dir, log)
         commit_message = "user prompt"
 
         # three possibilities:
@@ -137,35 +154,35 @@ class GitlogHooks(Hooks):
         if not hashes:
             # the file has no hashes, it has never been comitted. add it
             branch_name = make_branch_name(file_path)
-            print(f"gitlog: adding file {file_path.name} on new branch {branch_name}")
+            log.debug(f"gitlog: adding file {file_path.name} on new branch {branch_name}")
             if not context.root_config.dry_run:
-                run_command(f"git checkout --orphan {branch_name}", shadow_worktree_dir)
+                run_command(f"git checkout --orphan {branch_name}", shadow_worktree_dir, log)
 
                 shadow_file_name = shadow_worktree_dir/file_path.name
                 shadow_file_name.touch()
-                run_command(f"git add {file_path.name}", shadow_worktree_dir)
-                run_command(f"git commit -a -m 'empty file'", shadow_worktree_dir)
+                run_command(f"git add {file_path.name}", shadow_worktree_dir, log)
+                run_command(f"git commit -a -m 'empty file'", shadow_worktree_dir, log)
 
                 file_path.copy(shadow_file_name) # copy our file into shadow worktree
-                run_command(f"git commit -a -m '{commit_message}'", shadow_worktree_dir)
-                run_command(f"git checkout --detach", shadow_worktree_dir) # to avoid error "fatal: ... is already checked out" below
+                run_command(f"git commit -a -m '{commit_message}'", shadow_worktree_dir, log)
+                run_command(f"git checkout --detach", shadow_worktree_dir, log) # to avoid error "fatal: ... is already checked out" below
 
                 # put main worktree on new branch
-                run_command(f"git switch --no-guess --force {branch_name}", main_worktree_dir)
+                run_command(f"git switch --no-guess --force {branch_name}", main_worktree_dir, log)
             else:
-                print("gitlog: dry run. no action taken")
+                log.debug("gitlog: dry run. no action taken")
         elif potential_branch_point is None or potential_branch_point.hash == hashes[0] or not should_backtrack(potential_branch_point):
             # the prefix is the current tip, the input is append-only, no need to branch
-            print("gitlog: comitting modifications to current branch")
+            log.debug("gitlog: comitting modifications to current branch")
 
             if not context.root_config.dry_run:
-                run_command(f"git commit -a -m '{commit_message}'", main_worktree_dir)
+                run_command(f"git commit -a -m '{commit_message}'", main_worktree_dir, log)
             else:
-                print("gitlog: dry run. no action taken")
+                log.debug("gitlog: dry run. no action taken")
         else:
             # back-track and branch
             branch_name = make_branch_name(file_path)
-            print(f"backtracking to {potential_branch_point.hash} and comitting modifications on new branch {branch_name}")
+            log.debug(f"backtracking to {potential_branch_point.hash} and comitting modifications on new branch {branch_name}")
             if not context.root_config.dry_run:
                 # create a branch at potential_branch_point.hash while leaving our input file unmodified
                 # without geting errors about there being uncomitted changes
@@ -173,11 +190,11 @@ class GitlogHooks(Hooks):
                 # in shadow_worktree_dir:
                 # create and check-out the branch in the shadow worktree
                 # then copy and commit our work there
-                run_command(f"git branch {branch_name} {potential_branch_point.hash}", shadow_worktree_dir)
-                run_command(f"git checkout {branch_name}", shadow_worktree_dir)
+                run_command(f"git branch {branch_name} {potential_branch_point.hash}", shadow_worktree_dir, log)
+                run_command(f"git checkout {branch_name}", shadow_worktree_dir, log)
                 file_path.copy(shadow_worktree_dir/file_path.name) # copy our file into shadow worktree
-                run_command(f"git commit -a -m '{commit_message}'", shadow_worktree_dir)
-                run_command(f"git checkout --detach", shadow_worktree_dir) # to avoid error "fatal: ... is already checked out" below
+                run_command(f"git commit -a -m '{commit_message}'", shadow_worktree_dir, log)
+                run_command(f"git checkout --detach", shadow_worktree_dir, log) # to avoid error "fatal: ... is already checked out" below
 
                 # in main_worktree_dir
                 # checkout the branch in the main worktree (it already matches our working copy)
@@ -185,26 +202,27 @@ class GitlogHooks(Hooks):
 
                 # note that we need --merge to avoid an error about local changes
                 # but there is no merge to perform because our local changes are already on the new branch
-                run_command(f"git switch --no-guess --merge {branch_name}", main_worktree_dir)
+                run_command(f"git switch --no-guess --merge {branch_name}", main_worktree_dir, log)
             else:
-                print("gitlog: dry run. no action taken")
+                log.debug("gitlog: dry run. no action taken")
 
-        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+        log.debug("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 
     def on_response_completed(self, context: HooksContext):
         """
         called after the file has been saved, flushed and closed, with the responses.
         """
-        print("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
-        print("prapti.experimental.gitlog: on_response_completed")
-        print(f"{context.state.file_name = }")
+        log = context.state.log
+        log.debug("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
+        log.debug("prapti.experimental.gitlog: on_response_completed")
+        log.debug(f"{context.state.file_name = }")
 
         main_worktree_dir = context.state.file_name.resolve().parent
-        print(f"{context.state.file_name.name = }, {main_worktree_dir = }")
+        log.debug(f"{context.state.file_name.name = }, {main_worktree_dir = }")
 
         if not context.root_config.dry_run:
-            run_command(f"git commit -a -m 'assistant response'", main_worktree_dir)
-        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+            run_command(f"git commit -a -m 'assistant response'", main_worktree_dir, log)
+        log.debug("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 
 # ^^^ END UNDER CONSTRUCTION /////////////////////////////////////////////////
 # ----------------------------------------------------------------------------

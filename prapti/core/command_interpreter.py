@@ -17,21 +17,21 @@ def _join_alternatives(alternatives: list[str]):
 
 def run_action(has_exclamation: bool, action_name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
     core_state = get_private_core_state(state)
-    #print(f"running action '{'!' if has_exclamation else ''}{action_name}' with raw args '{raw_args}'")
+    #state.log.debug(f"running action '{'!' if has_exclamation else ''}{action_name}' with raw args '{raw_args}'")
 
     matches: list[Action] = core_state.actions.lookup_action(action_name)
     match len(matches):
         case 0:
-            print(f"warning: could not find action {action_name}")
+            state.log.error("action-not-found", f"could not find action {action_name}")
         case 1:
             action = matches[0]
             if action.exclamation_only and not has_exclamation:
-                print(f"warning: action '{action_name}' is !-only but written without a '!'")
+                state.log.error("excl-only-action-without-excl", f"action '{action_name}' is !-only but written without a '!'")
                 return None
             return action.function(action_name, raw_args, state)
         case _:
             alternatives = _join_alternatives([action.qualified_name for action in matches])
-            print(f"action name '{action_name}' is ambiguous, did you mean: {alternatives}")
+            state.log.error("ambiguous-action-name", f"action name '{action_name}' is ambiguous, did you mean: {alternatives}")
     return None
 
 # process '%' commands -------------------------------------------------------
@@ -66,20 +66,20 @@ def _interpret_command(command_text: str, is_final_message: bool, state: Executi
         name = match.group(2)
         equals_sign = match.group(3)
         RHS = match.group(4).strip() if match.group(4) else ""
-        #print(f"{has_exclamation = }, {name = }, {equals_sign = }, {RHS = }")
+        #state.log.debug(f"{has_exclamation = }, {name = }, {equals_sign = }, {RHS = }")
 
         if not has_exclamation or (has_exclamation and is_final_message): # has_exclamation commands only run in final message
             if equals_sign:
                 # assignment:
                 if len(RHS) == 0: # missing right hand side of assignment
-                    print(f"warning: skipping assignment command with no right-hand-side '{command_text}'")
+                    state.log.warning("skiping-empty-assignment", f"skipping assignment command with no right-hand-side '{command_text}'")
                 else:
-                    assign_configuration_field(name, RHS, state.root_config)
+                    assign_configuration_field(state.root_config, name, RHS, state.log)
             else:
                 # action:
                 result = run_action(has_exclamation, name, RHS, state)
     else:
-        print(f"warning: could not interpret command '{command_text}'")
+        state.log.warning("unknown-command", f"warning: could not interpret command '{command_text}'")
     return result
 
 def interpret_commands(message_sequence: list[Message], state: ExecutionState) -> None:

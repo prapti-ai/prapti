@@ -2,10 +2,11 @@
     Actions are wrappers for functions that are triggered by `%`-commands embedded in the markdown
 """
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Any
 from collections import defaultdict
 
 from .command_message import Message
+from .source_location import SourceLocation
 
 @dataclass
 class Action:

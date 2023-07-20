@@ -4,6 +4,7 @@
 """
 from dataclasses import dataclass, field
 import ast
+from .logger import DiagnosticsLogger
 
 class PluginsConfiguration:
     """contains a dynamic configuration entry for each loaded plugin"""
@@ -39,13 +40,13 @@ class RootConfiguration:
     temperature: float = None
     n: int = None # number of responses to generate
 
-def assign_configuration_field(original_field_name: str, field_value: str, root_config: RootConfiguration) -> None:
+def assign_configuration_field(root_config: RootConfiguration, original_field_name: str, field_value: str, log: DiagnosticsLogger) -> None:
     field_name = original_field_name
     target = root_config
     while '.' in field_name:
         source, field_name = field_name.split('.', maxsplit=1)
         if not hasattr(target, source):
-            print(f"warning: unknown configuration field '{original_field_name}',  component '{source}' does not exist, skipping command")
+            log.error("unknown-field-component", f"unknown configuration field '{original_field_name}', component '{source}' does not exist, skipping command")
             return
         target = getattr(target, source)
 
@@ -60,6 +61,6 @@ def assign_configuration_field(original_field_name: str, field_value: str, root_
         except Exception as e:
             raise ValueError(f"error coercing configuration value '{field_value}' to a '{field_type}'") from e
         setattr(target, field_name, assigned_value)
-        print(f"setting configuration.{original_field_name} = {parsed_value}")
+        log.detail("set-field", f"setting configuration.{original_field_name} = {parsed_value}")
     else:
-        print(f"warning: unknown configuration field '{original_field_name}', skipping command")
+        log.error("unknown-field", f"unknown configuration field '{original_field_name}', skipping command")

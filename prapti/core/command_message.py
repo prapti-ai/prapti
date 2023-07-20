@@ -4,14 +4,16 @@
     Abstraction of a markdown chat document as a sequence of
     chat Messages, each of which may contain interjecting Commands.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
+from .source_location import SourceLocation
 
 @dataclass
 class Command:
     text: str # begins with the first non-whitespace character after '%', does not include trailing '\n'
     _is_enabled: bool = True
-    result: None|str|Any = None # None|str|'Message'
+    result: str|Any|None = None # str|'Message'|None
+    source_loc: SourceLocation|None = None
 
     def is_enabled(self):
         return self._is_enabled
@@ -28,6 +30,7 @@ class Message:
         # ^^^ allow embedded inline commands e.g. for file inclusion
         # also allow "None" items so that command outputs can be re-written to None without otherwise modifying the list
     _is_enabled: bool = True
+    source_loc: SourceLocation|None = None
 
     def is_enabled(self) -> bool:
         return self._is_enabled
@@ -69,5 +72,4 @@ def flatten_message_content(messages: list[Message]) -> list[Message]:
                 elif isinstance(item.result, Message):
                     response_messages.append(item.result)
         message.content = ["".join(content_strs).strip()]
-    #print(response_messages)
     return response_messages
