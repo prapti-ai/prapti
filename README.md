@@ -1,6 +1,6 @@
 # Prapti: converse with LLMs directly in markdown files
 
-> Hello! Welcome to Prapti. We're just getting started and we'd love for you to join the conversation. Please use GitHub *Discussions* general queries and suggestions, *Issues* for bug reports. Our *Pull Requests* are open.
+> Hello! Welcome to Prapti. It's early, and we're just getting started. Please use GitHub *Discussions* for general queries and suggestions, and *Issues* for bug reports. See [CONTRIBUTING.md](CONTRIBUTING.md) for code contributions.
 
 Prapti is a tool for prompting Large Language Models (LLMs) with an editable history. You work within a [markdown](https://www.markdownguide.org/) file where you can edit your prompts and the LLM's responses. Press a hot-key to get the next response from the LLM. Once received, the response is automatically appended to the file.
 
@@ -10,10 +10,10 @@ Prapti is a tool for prompting Large Language Models (LLMs) with an editable his
 - Markdown files are the native conversation format (headings with special text delimit message boundaries)
 - Easily edit the whole conversation history/context window, including previous LLM outputs
 - Inline configuration syntax: easily change LLM parameters and switch language models ("responders") with each round of the conversation
-- Extensible with plugins (responders, commands and processing hooks)
-- Support for OpenAI, GPT4All (experimental), or add your favourite LLM back-end by implementing a Responder plugin.
+- Designed to be extensible with plugins (responders, commands and processing hooks)
+- Supports OpenAI, GPT4All (experimental), or add your favourite LLM back-end by implementing a Responder plugin.
 
-Using prapti is an interactive experience, but you can get an idea of what it might be like to use prapti by reading [your first prapti conversation](start_here.md).
+Using prapti is an interactive experience, but you can get an idea of what it might be like by reading [your first prapti conversation](start_here.md).
 
 ## Installation and Setup
 
