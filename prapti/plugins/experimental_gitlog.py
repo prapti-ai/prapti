@@ -8,6 +8,7 @@
 import subprocess
 import pathlib
 import shlex
+import shutil
 from datetime import datetime
 from dataclasses import dataclass
 
@@ -20,7 +21,6 @@ from ..core.logger import DiagnosticsLogger
 # https://stackoverflow.com/questions/33625931/copy-file-with-pathlib-in-python
 # as to why pathlib.Path has a move method but not a copy method I do not know
 def _Path_copy(self: pathlib.Path, target: pathlib.Path) -> None:
-    import shutil
     assert self.is_file()
     shutil.copy(self, target)
     #shutil.copy(str(self), str(target))  # str() only there for Python < (3, 6)
