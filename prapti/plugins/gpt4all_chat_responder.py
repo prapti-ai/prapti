@@ -80,7 +80,7 @@ class GPT4AllChatResponder(Responder):
     def construct_configuration(self, context: ResponderContext) -> typing.Any|None:
         return GPT4AllResponderConfiguration()
 
-    def generate_responses(self, input: list[Message], context: ResponderContext) -> list[Message]:
+    def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
         config: GPT4AllResponderConfiguration = context.responder_config
         context.log.debug(f"gpt4all.chat: {config = }")
 
@@ -94,7 +94,7 @@ class GPT4AllChatResponder(Responder):
             d = asdict(config)
             return [Message(role="assistant", name=None, content=f"dry run mode. {current_time}\nconfig = {d}")]
 
-        prompt = convert_message_sequence_to_text_prompt(input)
+        prompt = convert_message_sequence_to_text_prompt(input_)
 
         model = gpt4all.GPT4All(model_name = config.model_name,
                                 model_path = config.model_path,
