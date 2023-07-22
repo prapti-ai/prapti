@@ -1,7 +1,11 @@
 """
     Plugins are dynamically loaded extensions.
 """
-from typing import Any, Optional
+from typing import Any
+
+from ..core.action import ActionNamespace
+from ..core.hooks import Hooks
+from ..core.responder import Responder
 
 class Plugin:
     """Base class for plugins"""
@@ -11,14 +15,14 @@ class Plugin:
         self.version: str = version
         self.description: str = description
 
-    def construct_configuration(self) -> Optional[Any]:
+    def construct_configuration(self) -> Any|None:
         return None
 
-    def construct_actions(self) -> Optional['ActionNamespace']:
+    def construct_actions(self) -> ActionNamespace|None:
         return None
 
-    def construct_hooks(self) -> Optional['Hooks']:
+    def construct_hooks(self) -> Hooks|None:
         return None
 
-    def construct_responder(self) -> Optional['Responder']:
+    def construct_responder(self) -> Responder|None:
         return None

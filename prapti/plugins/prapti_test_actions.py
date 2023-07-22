@@ -3,9 +3,6 @@
 
     see test_actions.md for testing
 """
-from typing import Optional
-
-from ..core.execution_state import ExecutionState
 from ..core.plugin import Plugin
 from ..core.action import ActionNamespace, ActionContext
 from ..core.command_message import Message
@@ -36,7 +33,7 @@ class TestActionsPlugin(Plugin):
             description = "Actions used to test Prapti"
         )
 
-    def construct_actions(self) -> Optional['ActionNamespace']:
+    def construct_actions(self) -> ActionNamespace|None:
         return _actions
 
 prapti_plugin = TestActionsPlugin()

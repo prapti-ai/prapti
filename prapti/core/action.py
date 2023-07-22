@@ -15,7 +15,7 @@ from .logger import DiagnosticsLogger
 class ActionContext:
     state: ExecutionState
     root_config: RootConfiguration
-    plugin_config: Any
+    plugin_config: Any | None # will be None for non-plugin actions
     source_loc: SourceLocation
     log: DiagnosticsLogger
 

@@ -2,7 +2,6 @@
     Actions for including content into the chat.
 """
 import pathlib
-from typing import Optional
 
 from ..core.plugin import Plugin
 from ..core.action import ActionNamespace, ActionContext
@@ -67,7 +66,7 @@ class IncludePlugin(Plugin):
             description = "Commands for including file contents"
         )
 
-    def construct_actions(self) -> Optional['ActionNamespace']:
+    def construct_actions(self) -> ActionNamespace|None:
         return _actions
 
 prapti_plugin = IncludePlugin()

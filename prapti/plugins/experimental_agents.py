@@ -119,7 +119,7 @@ class AgentsHooks(Hooks):
                 return name
         return None
 
-    def _find_least_recent_discussion_group_participant(self, context: HooksContext) -> str:
+    def _find_least_recent_discussion_group_participant(self, context: HooksContext) -> str|None:
         if context.plugin_config._discussion_group:
             # find the least recently participating discussion participant and give them a turn
             # return an arbitrary element if not all participants have sent a message

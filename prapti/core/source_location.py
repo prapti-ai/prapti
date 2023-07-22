@@ -7,5 +7,5 @@ class SourceLocation:
     e.g. the location of a message, command, token, etc.
     used in error reporting to give targeted diagnostic output."""
     file_path: Path|None = None
-    line: int|None = None # 1-based
-    column: int|None = None # 1-based
+    line: int|None = None # line number (1-based)
+    column: int|None = None # column number (1-based)
