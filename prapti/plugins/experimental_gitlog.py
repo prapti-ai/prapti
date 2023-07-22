@@ -113,8 +113,8 @@ class GitlogHooks(Hooks):
         log = context.state.log
         log.debug("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
         log.debug("prapti.experimental.gitlog: on_plugin_loaded")
-        log.debug(f"{context.state.file_name = }")
-        file_path = context.state.file_name.resolve()
+        log.debug(f"{context.state.input_file_path = }")
+        file_path = context.state.input_file_path.resolve()
         main_worktree_dir = file_path.parent
         shadow_worktree_dir = main_worktree_dir / ".prapti_shadow_worktree"
         gitignore_file = main_worktree_dir / ".gitignore"
@@ -215,10 +215,10 @@ class GitlogHooks(Hooks):
         log = context.state.log
         log.debug("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
         log.debug("prapti.experimental.gitlog: on_response_completed")
-        log.debug(f"{context.state.file_name = }")
+        log.debug(f"{context.state.input_file_path = }")
 
-        main_worktree_dir = context.state.file_name.resolve().parent
-        log.debug(f"{context.state.file_name.name = }, {main_worktree_dir = }")
+        main_worktree_dir = context.state.input_file_path.resolve().parent
+        log.debug(f"{context.state.input_file_path.name = }, {main_worktree_dir = }")
 
         if not context.root_config.dry_run:
             run_command(f"git commit -a -m 'assistant response'", main_worktree_dir, log)
