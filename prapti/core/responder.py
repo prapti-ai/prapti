@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 from .command_message import Message
 from .configuration import RootConfiguration
+from .logger import DiagnosticsLogger
 
 @dataclass
 class ResponderContext:
@@ -20,6 +21,7 @@ class ResponderContext:
     # NOTE: ^^^ responder_config will be an EmptyResponderConfiguration before construct_configuration is called
     responder_name: str
     responder: 'Responder'
+    log: DiagnosticsLogger
 
 class Responder(metaclass=abc.ABCMeta):
     """Base class for responders"""

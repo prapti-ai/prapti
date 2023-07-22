@@ -1,15 +1,14 @@
 """
     Builtin actions.
 """
-import traceback
-
 from ._core_execution_state import get_private_core_state
 from .execution_state import ExecutionState
 from .configuration import EmptyPluginConfiguration, EmptyResponderConfiguration
 from .command_message import Message
-from .action import ActionNamespace
+from .action import ActionNamespace, ActionContext
 from .responder import ResponderContext
 from . import hooks
+from .source_location import SourceLocation
 
 builtin_actions: ActionNamespace = ActionNamespace()
 
@@ -42,16 +41,17 @@ plugins_dict = {plugin.name : plugin for plugin in plugins}
 # ----------------------------------------------------------------------------
 # plugin management
 
-def load_plugin(plugin, state: ExecutionState):
+def load_plugin(plugin, source_loc: SourceLocation, state: ExecutionState):
     try:
         core_state = get_private_core_state(state)
         # setup
         plugin_config = plugin.construct_configuration() or EmptyPluginConfiguration()
-        plugin_actions = plugin.construct_actions()
+        plugin_actions: ActionNamespace = plugin.construct_actions()
         plugin_hooks = plugin.construct_hooks()
         # commit
         setattr(state.root_config.plugins, plugin.name, plugin_config)
         if plugin_actions:
+            plugin_actions.set_plugin_config(plugin_config)
             plugin_actions.merge_into(core_state.actions)
         core_state.loaded_plugins.add(plugin)
         if plugin_hooks:
@@ -59,25 +59,24 @@ def load_plugin(plugin, state: ExecutionState):
             plugin_hooks.on_plugin_loaded(hooks_context)
             core_state.hooks_distributor.add_hooks(hooks_context)
     except Exception as e:
-        print(f"warning: exception caught while loading plugin {plugin.name}: {e}")
-        traceback.print_exc()
-        print("---")
+        state.log.error("load-plugin-exception", f"exception while loading plugin '{plugin.name}': {repr(e)}", source_loc)
+        state.log.logger.debug(e, exc_info=True)
 
 @builtin_actions.add_action("plugins.load")
-def plugins_load(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
-    core_state = get_private_core_state(state)
+def plugins_load(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
+    core_state = get_private_core_state(context.state)
     global plugins, plugins_dict
     plugin_name = raw_args.strip()
     if plugin := plugins_dict.get(plugin_name, None):
         if plugin not in core_state.loaded_plugins:
-            load_plugin(plugin, state)
+            load_plugin(plugin, context.source_loc, context.state)
     else:
-        print(f"warning: couldn't load plugin '{plugin_name}'. not found.")
+        context.log.error("plugin-not-found", f"couldn't load plugin '{plugin_name}'. plugin not found.", context.source_loc)
     return None
 
 @builtin_actions.add_action("!plugins.list")
-def plugins_list(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
-    core_state = get_private_core_state(state)
+def plugins_list(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
+    core_state = get_private_core_state(context.state)
     global plugins
     if len(plugins) > 0:
         plugin_lines = [f"- **`{plugin.name}`**: {plugin.description}{' (loaded)' if plugin in core_state.loaded_plugins else ''}" for plugin in plugins]
@@ -97,35 +96,35 @@ def lookup_active_responder(state: ExecutionState) -> tuple[str, ResponderContex
     return (responder_name, core_state.responder_contexts.get(responder_name, None))
 
 @builtin_actions.add_action("responder.new")
-def responder_new(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
-    core_state = get_private_core_state(state)
+def responder_new(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
+    core_state = get_private_core_state(context.state)
     global plugins_dict
     responder_name, plugin_name = raw_args.split()
     if plugin := plugins_dict.get(plugin_name, None):
         if plugin not in core_state.loaded_plugins:
-            load_plugin(plugin, state)
+            load_plugin(plugin, context.source_loc, context.state)
         if plugin in core_state.loaded_plugins:
             if responder := plugin.construct_responder():
-                plugin_config = getattr(state.root_config.plugins, plugin_name, None)
+                plugin_config = getattr(context.root_config.plugins, plugin_name, None)
                 responder_context = ResponderContext(plugin_name=plugin_name,
-                                                     root_config=state.root_config, plugin_config=plugin_config, responder_config=EmptyResponderConfiguration(),
-                                                     responder_name=responder_name, responder=responder)
+                                                     root_config=context.root_config, plugin_config=plugin_config, responder_config=EmptyResponderConfiguration(),
+                                                     responder_name=responder_name, responder=responder, log=context.log)
                 responder_context.responder_config = responder.construct_configuration(responder_context) or responder_context.responder_config
                 core_state.responder_contexts[responder_name] = responder_context
-                setattr(state.root_config.responders, responder_name, responder_context.responder_config)
+                setattr(context.root_config.responders, responder_name, responder_context.responder_config)
             else:
-                print("warning: '{plugin_name}' did not construct responder.")
+                context.log.error("failed-responder-new", "couldn't construct responder '{responder_name}'. plugin '{plugin_name}' did not construct responder.", context.source_loc)
     else:
-        print("warning: couldn't locate responder provider plugin '{plugin_name}'. not found.")
+        context.log.error("plugin-not-found", "couldn't locate responder provider plugin '{plugin_name}'. plugin not found.", context.source_loc)
 
 @builtin_actions.add_action("responder.push")
-def responder_push(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
+def responder_push(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
     responder_name = raw_args.strip()
-    state.root_config.responder_stack.append(responder_name)
+    context.root_config.responder_stack.append(responder_name)
 
 @builtin_actions.add_action("responder.pop")
-def responder_pop(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
-    if state.root_config.responder_stack:
-        state.root_config.responder_stack.pop()
+def responder_pop(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
+    if context.root_config.responder_stack:
+        context.root_config.responder_stack.pop()
 
 # ----------------------------------------------------------------------------

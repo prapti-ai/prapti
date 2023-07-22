@@ -4,6 +4,8 @@
 """
 from dataclasses import dataclass, field
 import ast
+from .logger import DiagnosticsLogger
+from .source_location import SourceLocation
 
 class PluginsConfiguration:
     """contains a dynamic configuration entry for each loaded plugin"""
@@ -35,17 +37,18 @@ class RootConfiguration:
 
     # global/generic parameter aliases
     # if you set one of these in your markdown it will override the model-specific parameter that it aliases
+    # FIXME TODO: allow global vars to be |None or unset
     model: str = None
     temperature: float = None
     n: int = None # number of responses to generate
 
-def assign_configuration_field(original_field_name: str, field_value: str, root_config: RootConfiguration) -> None:
+def assign_configuration_field(root_config: RootConfiguration, original_field_name: str, field_value: str, source_loc: SourceLocation, log: DiagnosticsLogger) -> None:
     field_name = original_field_name
     target = root_config
     while '.' in field_name:
         source, field_name = field_name.split('.', maxsplit=1)
         if not hasattr(target, source):
-            print(f"warning: unknown configuration field '{original_field_name}',  component '{source}' does not exist, skipping command")
+            log.error("unknown-field-component", f"skipping configuration assignment. unknown configuration field '{original_field_name}', component '{source}' does not exist", source_loc)
             return
         target = getattr(target, source)
 
@@ -60,6 +63,6 @@ def assign_configuration_field(original_field_name: str, field_value: str, root_
         except Exception as e:
             raise ValueError(f"error coercing configuration value '{field_value}' to a '{field_type}'") from e
         setattr(target, field_name, assigned_value)
-        print(f"setting configuration.{original_field_name} = {parsed_value}")
+        log.detail("set-field", f"setting configuration field: {original_field_name} = {parsed_value}", source_loc)
     else:
-        print(f"warning: unknown configuration field '{original_field_name}', skipping command")
+        log.error("unknown-field", f"skipping configuration assignment. unknown configuration field '{original_field_name}'", source_loc)

@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 import typing
 
 from ..core.plugin import Plugin
-from ..core.action import ActionNamespace
+from ..core.action import ActionNamespace, ActionContext
 from ..core.hooks import Hooks, HooksContext
 from ..core.execution_state import ExecutionState
 from ..core.command_message import Command, Message
@@ -49,18 +49,17 @@ class AgentsPluginConfiguration:
     _discussion_group: set[str] = field(default_factory=set)
 
 @_actions.add_action("agents.set_group")
-def set_group(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
+def set_group(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
     """set discussion group for manual cycling
     usage:
         agents.set_group agent_name1 [agent_name2 ...]
     """
     args = raw_args.split()
-    plugin_config: AgentsPluginConfiguration = getattr(state.root_config.plugins, "prapti.experimental.agents") # TODO fan out paths when building the config tree
-    plugin_config._discussion_group = set(args)
+    context.plugin_config._discussion_group = set(args)
     return None
 
 @_actions.add_action("!agents.discuss")
-def discuss(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
+def discuss(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
     """run round-robin agent discussions
     usage:
         agents.discuss n [agent_name1 ...]
@@ -68,15 +67,12 @@ def discuss(name: str, raw_args: str, state: ExecutionState) -> None|str|Message
     """
     args = raw_args.split()
     if len(args) < 1:
-        print("usage: agents.discuss n [agent_name ...]")
+        context.log.info("agents.discuss-usage", "usage: agents.discuss n [agent_name ...]", context.source_loc)
         return None
 
-    # FIXME would be nice to have an action context with access to the plugin config.
-    # we could also allow instantiating the plugin and defining actions as methods on the plugin instance
-    plugin_config: AgentsPluginConfiguration = getattr(state.root_config.plugins, "prapti.experimental.agents") # TODO fan out paths when building the config tree
-    plugin_config._n = int(args[0])
+    context.plugin_config._n = int(args[0])
     if len(args) > 1:
-        plugin_config._discussion_group = set(args[1:])
+        context.plugin_config._discussion_group = set(args[1:])
 
     # TODO: when we add the ability for actions to insert messages before/after the current message
     # we can kick-off the discussion by @-mentioning the first participant in a private message
@@ -96,7 +92,8 @@ class AgentsHooks(Hooks):
             return
 
         # an @-mention is no longer pending once the named agent speaks
-        pending_at_mentions.discard(message.name)
+        if message.name:
+            pending_at_mentions.discard(message.name)
 
         # accumulate @-mentions in this message
         for span in message.content:

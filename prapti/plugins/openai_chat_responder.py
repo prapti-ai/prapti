@@ -12,6 +12,7 @@ import tiktoken
 from ..core.plugin import Plugin
 from ..core.command_message import Message
 from ..core.responder import Responder, ResponderContext
+from ..core.logger import DiagnosticsLogger
 
 # openai chat API docs:
 # https://platform.openai.com/docs/guides/chat/introduction
@@ -63,12 +64,12 @@ class OpenAIChatParameters:
 # num_tokens_from_messages taken verbatim from:
 # https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
 # NOTE: does not estimate correctly if the functions API is being used.
-def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613") -> int:
+def num_tokens_from_messages(messages, model: str, log: DiagnosticsLogger) -> int:
     """Return the number of tokens used by a list of messages."""
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
-        print("Warning: model not found. Using cl100k_base encoding.")
+        log.warning("openai.chat-tiktoken-module-not-found", f"openal.chat.responder: num_tokens_from_messages: model '{model}' not found. Using cl100k_base encoding.")
         encoding = tiktoken.get_encoding("cl100k_base")
     if model in {
         "gpt-3.5-turbo-0613",
@@ -84,11 +85,11 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613") -> int:
         tokens_per_message = 4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
         tokens_per_name = -1  # if there's a name, the role is omitted
     elif "gpt-3.5-turbo" in model:
-        print("Warning: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0613.")
-        return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613")
+        log.warning("openai.chat-tiktoken-gpt-3.5-turbo-guess", "openal.chat: num_tokens_from_messages: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0613.")
+        return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613", log=log)
     elif "gpt-4" in model:
-        print("Warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613.")
-        return num_tokens_from_messages(messages, model="gpt-4-0613")
+        log.warning("openai.chat-tiktoken-gpt-4-guess", "openal.chat: num_tokens_from_messages: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613.")
+        return num_tokens_from_messages(messages, model="gpt-4-0613", log=log)
     else:
         raise NotImplementedError(
             f"""num_tokens_from_messages() is not implemented for model {model}. See https://github.com/openai/openai-python/blob/main/chatml.md for information on how messages are converted to tokens."""
@@ -152,33 +153,33 @@ class OpenAIChatResponder(Responder):
 
     def generate_responses(self, input: list[Message], context: ResponderContext) -> list[Message]:
         chat_parameters: OpenAIChatParameters = context.responder_config
-        print(f"openai.chat: {chat_parameters = }")
+        context.log.debug(f"openai.chat: {chat_parameters = }")
         # REVIEW: we should be treating the parameters as read-only here
 
         # propagate top-level parameter aliases:
         for name in ("model", "temperature", "n"):
             if (value := getattr(context.root_config, name, None)) is not None:
-                print(name, value)
+                context.log.debug(f"{name}, {value}")
                 setattr(chat_parameters, name, value)
 
         chat_parameters.messages = convert_message_sequence_to_openai_messages(input)
 
         # clamp requested completion token count to avoid API error if we ask for more than can be provided
-        prompt_token_count = num_tokens_from_messages(chat_parameters.messages, model=chat_parameters.model)
-        print(f"openai.chat: {prompt_token_count = }")
+        prompt_token_count = num_tokens_from_messages(chat_parameters.messages, model=chat_parameters.model, log=context.log)
+        context.log.debug(f"openai.chat: {prompt_token_count = }")
         model_token_limit = get_model_token_limit(chat_parameters.model)
         # NB: chat_parameters.max_tokens is the maximum response tokens
         if prompt_token_count + chat_parameters.max_tokens > model_token_limit:
             chat_parameters.max_tokens = model_token_limit - prompt_token_count
             if chat_parameters.max_tokens > 0:
-                print(f"openai.chat: warning: clamping completion to {chat_parameters.max_tokens} tokens")
+                context.log.info("openai.chat-clamping-max-tokens", f"openai.chat: clamping requested completion to {chat_parameters.max_tokens} max tokens")
             else:
-                print("openai.chat: token limit reached. exiting")
+                context.log.info("openai.chat-at-token-limit", "openai.chat: token limit reached. exiting")
                 return []
 
-        print(f"openai.chat: {chat_parameters = }")
+        context.log.debug(f"openai.chat: {chat_parameters = }")
         if context.root_config.dry_run:
-            print("openai.chat: dry run: bailing before hitting the OpenAI API")
+            context.log.info("openai.chat-dry-run", "openai.chat: dry run: bailing before hitting the OpenAI API")
             current_time = str(datetime.datetime.now())
             d = asdict(chat_parameters)
             d["messages"] = ["..."] # avoid overly long output
@@ -186,7 +187,7 @@ class OpenAIChatResponder(Responder):
 
         # docs: https://platform.openai.com/docs/api-reference/chat/create
         response = openai.ChatCompletion.create(**asdict(chat_parameters))
-        print(f"openai.chat: {response = }")
+        context.log.debug(f"openai.chat: {response = }")
 
         if len(response["choices"]) == 1:
             choice = response["choices"][0]

@@ -7,24 +7,24 @@ from typing import Optional
 
 from ..core.execution_state import ExecutionState
 from ..core.plugin import Plugin
-from ..core.action import ActionNamespace
+from ..core.action import ActionNamespace, ActionContext
 from ..core.command_message import Message
 
 _actions: ActionNamespace = ActionNamespace()
 
 @_actions.add_action("test.test")
-def test_test(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
-    print(f"test.test {name = }, {raw_args = }, {state.root_config = }")
+def test_test(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
+    context.log.debug(f"test.test {name = }, {raw_args = }, {context.root_config = }", context.source_loc)
     return None
 
 @_actions.add_action("teest.test")
-def teest_test(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
-    print(f"teest.test {name = }, {raw_args = }, {state.root_config = }")
+def teest_test(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
+    context.log.debug(f"teest.test {name = }, {raw_args = }, {context.root_config = }", context.source_loc)
     return None
 
 @_actions.add_action("teast.test")
-def teast_test(name: str, raw_args: str, state: ExecutionState) -> None|str|Message:
-    print(f"teast.test {name = }, {raw_args = }, {state.root_config = }")
+def teast_test(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
+    context.log.debug(f"teast.test {name = }, {raw_args = }, {context.root_config = }", context.source_loc)
     return None
 
 class TestActionsPlugin(Plugin):
@@ -33,7 +33,7 @@ class TestActionsPlugin(Plugin):
             api_version = "0.1.0",
             name = "prapti.test.actions",
             version = "0.0.1",
-            description = "Test actions"
+            description = "Actions used to test Prapti"
         )
 
     def construct_actions(self) -> Optional['ActionNamespace']:

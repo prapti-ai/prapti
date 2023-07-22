@@ -5,7 +5,7 @@ import pathlib
 from typing import Optional
 
 from ..core.plugin import Plugin
-from ..core.action import ActionNamespace
+from ..core.action import ActionNamespace, ActionContext
 from ..core.command_message import Message
 
 _actions: ActionNamespace = ActionNamespace()
@@ -40,11 +40,11 @@ def get_markdown_language(file_extension):
     return language_map.get(file_extension, "")
 
 @_actions.add_action("include.code")
-def include_code(name: str, raw_args: str, state: 'ExecutionState') -> None|str|Message:
+def include_code(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
     """"insert a fenced code block containing the contents of a file"""
     path = pathlib.Path(raw_args.strip().strip("'\""))
     if not path.is_absolute():
-        containing_directory = state.file_name.resolve().parent
+        containing_directory = context.state.file_name.resolve().parent
         path = containing_directory / path
 
     # TODO: support a --language argument. we're never going to cover every language
