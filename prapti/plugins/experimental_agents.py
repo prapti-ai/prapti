@@ -192,10 +192,10 @@ class AgentsHooks(Hooks):
 
     def on_followup(self, context: HooksContext) -> tuple[bool, list[Message]|None]:
         if context.plugin_config._discussion_group and context.plugin_config._n > 0:
-            agent_name = self._find_least_recent_discussion_group_participant(context)
-            # trigger the agent by @-mentioning them. This will be picked up in on_before_generate_responses
-            # this hopefully ensures that all participants get a turn even if they are also @-messaging each other
-            return True, [Message(role="_prapti.experimental.agents", name=None, content=f"@{agent_name}")]
+            if agent_name := self._find_least_recent_discussion_group_participant(context):
+                # trigger the agent by @-mentioning them. This will be picked up in on_before_generate_responses
+                # this hopefully ensures that all participants get a turn even if they are also @-messaging each other
+                return True, [Message(role="_prapti.experimental.agents", name=None, content=[f"@{agent_name}"])]
         return False, None
 
 # ^^^ END UNDER CONSTRUCTION /////////////////////////////////////////////////

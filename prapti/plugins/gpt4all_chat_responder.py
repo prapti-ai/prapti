@@ -92,7 +92,7 @@ class GPT4AllChatResponder(Responder):
             context.log.info("gpt4all.chat-dry-run", "gpt4all.chat: dry run: bailing before hitting the GPT4All API")
             current_time = str(datetime.datetime.now())
             d = asdict(config)
-            return [Message(role="assistant", name=None, content=f"dry run mode. {current_time}\nconfig = {d}")]
+            return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {d}"])]
 
         prompt = convert_message_sequence_to_text_prompt(input_)
 
@@ -117,7 +117,7 @@ class GPT4AllChatResponder(Responder):
         else:
             response = model.generate(prompt=prompt, **generate_args)
 
-        return [Message(role="assistant", name=None, content=response)]
+        return [Message(role="assistant", name=None, content=[response])]
 
 # ^^^ END UNDER CONSTRUCTION /////////////////////////////////////////////////
 # ----------------------------------------------------------------------------
