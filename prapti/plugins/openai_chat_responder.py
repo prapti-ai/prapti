@@ -151,7 +151,7 @@ class OpenAIChatResponder(Responder):
     def construct_configuration(self, context: ResponderContext) -> typing.Any|None:
         return OpenAIChatParameters()
 
-    def generate_responses(self, input: list[Message], context: ResponderContext) -> list[Message]:
+    def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
         chat_parameters: OpenAIChatParameters = context.responder_config
         context.log.debug(f"openai.chat: {chat_parameters = }")
         # REVIEW: we should be treating the parameters as read-only here
@@ -162,7 +162,7 @@ class OpenAIChatResponder(Responder):
                 context.log.debug(f"{name}, {value}")
                 setattr(chat_parameters, name, value)
 
-        chat_parameters.messages = convert_message_sequence_to_openai_messages(input)
+        chat_parameters.messages = convert_message_sequence_to_openai_messages(input_)
 
         # clamp requested completion token count to avoid API error if we ask for more than can be provided
         prompt_token_count = num_tokens_from_messages(chat_parameters.messages, model=chat_parameters.model, log=context.log)
