@@ -74,14 +74,14 @@ def default_load_config_files(state: ExecutionState):
     # (.editorconfig algorithm) starting from the directory containing the input markdown file,
     # load `.prapticonfig.md`. Iterate up the tree until a config file sets config_root = True
     state.root_config.config_root = False
-    for parent in state.file_name.resolve().parents:
+    for parent in state.input_file_path.resolve().parents:
         found_config_file = load_config_file(parent / ".prapticonfig.md", state)
         if found_config_file and state.root_config.config_root:
             break # stop once we hit a config file with `%config_root = True`
 
     # if no config file is present, use fallback config
     if not found_config_file:
-        state.log.detail("loading-fallback-config", f"loading fallback configuration", state.file_name)
+        state.log.detail("loading-fallback-config", f"loading fallback configuration", state.input_file_path)
         parse_messages_and_interpret_commands(fallback_config_file_data.splitlines(keepends=True), pathlib.Path("<fallback-config>"), state)
 
 def find_final_prompt_message(messages: list[Message]) -> Message|None:
@@ -118,7 +118,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     command_line_args = argument_parser.parse_args(args=argv) # parse command line args, uses sys.argv if None is passed
 
     # construct execution state
-    state = ExecutionState(log=create_diagnostics_logger(), file_name=pathlib.Path(command_line_args.filename))
+    state = ExecutionState(log=create_diagnostics_logger(), input_file_path=pathlib.Path(command_line_args.filename))
     core_state = CoreExecutionState()
     state._core_state = core_state
     builtin_actions.merge_into(core_state.actions)
@@ -133,16 +133,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         load_config_file(config_path, state)
 
     # process input file, generate response
-    with open(state.file_name, "rt+", encoding="utf-8") as file:
-        state.log.detail("loading-input", f"loading input file", state.file_name)
+    with open(state.input_file_path, "rt+", encoding="utf-8") as file:
+        state.log.detail("loading-input", f"loading input file", state.input_file_path)
         lines = file.readlines()
         # early-out if the input file is effectively empty
         if not lines or all(not line.strip() for line in lines): # if file is effectively empty
-            state.log.info("empty-input", "here's the default template. start writing.", state.file_name)
+            state.log.info("empty-input", "here's the default template. start writing.", state.input_file_path)
             file.write(get_default_template(state.log))
             return 0
 
-        parse_messages_and_interpret_commands(lines, state.file_name, state)
+        parse_messages_and_interpret_commands(lines, state.input_file_path, state)
 
         emitted_messages = flatten_message_content(state.message_sequence)
 
@@ -164,7 +164,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         final_prompt_message = find_final_prompt_message(state.message_sequence)
         if not final_prompt_message:
             # early-out if no viable prompt message supplied
-            state.log.error("absent-prompt", "no non-hidden non-disabled messages found. write something.", state.file_name)
+            state.log.error("absent-prompt", "no non-hidden non-disabled messages found. write something.", state.input_file_path)
             write_message(file, user_response_prompt_message)
             return 0
 
@@ -181,7 +181,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
             responder_name, responder_context = lookup_active_responder(state)
             if not responder_context:
-                state.log.critical("active-responder-not-found", f"couldn't generate a response, sorry. the active responder '{responder_name}' was not found.", state.file_name)
+                state.log.critical("active-responder-not-found", f"couldn't generate a response, sorry. the active responder '{responder_name}' was not found.", state.input_file_path)
                 return 1
             state.selected_responder_context = responder_context
 
@@ -220,6 +220,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             file.close() # ensure flush and close prior to calling on_response_completed
             core_state.hooks_distributor.on_response_completed()
         else:
-            state.log.error("no-response", "no response generated, sorry.", state.file_name)
+            state.log.error("no-response", "no response generated, sorry.", state.input_file_path)
 
     return 0 # success

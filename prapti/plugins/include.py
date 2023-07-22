@@ -43,7 +43,7 @@ def include_code(name: str, raw_args: str, context: ActionContext) -> None|str|M
     """"insert a fenced code block containing the contents of a file"""
     path = pathlib.Path(raw_args.strip().strip("'\""))
     if not path.is_absolute():
-        containing_directory = context.state.file_name.resolve().parent
+        containing_directory = context.state.input_file_path.resolve().parent
         path = containing_directory / path
 
     # TODO: support a --language argument. we're never going to cover every language

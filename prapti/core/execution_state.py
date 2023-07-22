@@ -14,7 +14,7 @@ class ExecutionState:
         processing a markdown file and producing responses.
     """
     log: DiagnosticsLogger
-    file_name: pathlib.Path
+    input_file_path: pathlib.Path
     root_config: RootConfiguration = field(default_factory=RootConfiguration)
     message_sequence: list[Message] = field(default_factory=list)
     responses: list[Message] = field(default_factory=list)
