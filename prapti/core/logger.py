@@ -23,6 +23,7 @@
 from typing import Any
 import logging
 import pathlib
+import sys
 from .source_location import SourceLocation
 
 # Add HINT and DETAIL logging levels, without monkey patching anything.
@@ -41,16 +42,18 @@ def add_logging_level(level: int, name: str, lower_bound: int, upper_bound: int)
         logging.addLevelName(level, name)
         return level
     if existing_level > upper_bound or existing_level < lower_bound:
-        print(f"prapti: warning: log level {name} was not configured in expected range")
+        print(f"prapti: warning: log level {name} was not configured in expected range", file=sys.stderr)
     return existing_level
 
 HINT: int = add_logging_level(25, "HINT", logging.INFO, logging.WARNING) # midway between INFO and WARNING
 DETAIL: int = add_logging_level(15, "DETAIL", logging.DEBUG, logging.INFO) # midway between DEBUG and INFO
 
+
 class DiagnosticsLogger:
-    """Ergonomic facade for logging diagnostic messages.
-    Require message ids and support optional SourceLocation arguments.
-    Count message events to support staged halting on error conditions.
+    """Ergonomic facade for logging compiler-style diagnostic messages.
+    - Requires message ids for INFO and above.
+    - Supports a range of source location arguments.
+    - Counts message events to support staged halting on error conditions.
     """
     def __init__(self, logger: logging.Logger):
         self.logger = logger
@@ -68,7 +71,7 @@ class DiagnosticsLogger:
     def warning_count(self) -> int:
         return self.message_counts[logging.WARNING]
 
-    def _decode_extras(self, extras_dict: dict[str, Any], extras: tuple[Any], kwextras: dict[str, Any]):
+    def _decode_extras(self, extras_dict: dict[str, Any], extras: tuple[Any, ...], kwextras: dict[str, Any]):
         """take extras and kwextras and interpret them into the following fields in extras_dict:
             - source_file_path
             - source_line # 1-based
@@ -101,7 +104,7 @@ class DiagnosticsLogger:
         if column is not None:
             extras_dict['source_column'] = column
 
-    def _make_extra(self, message_id, extras: tuple[Any], kwextras: dict[str, Any]) -> dict[str, Any]:
+    def _make_extra(self, message_id, extras: tuple[Any, ...], kwextras: dict[str, Any]) -> dict[str, Any]:
         extras_dict: dict[str, Any] = {'message_id': message_id}
         self._decode_extras(extras_dict, extras, kwextras)
         return extras_dict
@@ -114,20 +117,22 @@ class DiagnosticsLogger:
     # extras that associate a source location to the log message. Similarly, the line
     # and column keyword arguments can be used to specify line and column.
 
-    def _log(self, level, msg_id_or_msg: str, msg_or_first_extra: Any, extras: tuple[Any], kwextras: dict[str, Any]):
+    def _log(self, level, msg_id_or_msg: str, msg_and_or_extras: tuple[Any, ...], kwextras: dict[str, Any]):
         # make the call behave as if the signature is
         #   error([message_id=None], message, *extras, **kwextras)
-        if msg_or_first_extra is None:
+        if not msg_and_or_extras:
             message_id = None
             message = msg_id_or_msg
-        elif isinstance(msg_or_first_extra, str):
+            extras = tuple()
+        elif isinstance(msg_and_or_extras[0], str):
             message_id = msg_id_or_msg
-            message = msg_or_first_extra
+            message = msg_and_or_extras[0]
+            extras = msg_and_or_extras[1:]
         else:
-            # msg_or_first_extra is not a string
+            # msg_and_or_extras[0] is not a string
             message_id = None
             message = msg_id_or_msg
-            extras = (msg_or_first_extra,) + extras
+            extras = msg_and_or_extras
 
         if level >= logging.INFO:
             assert message_id is not None, "message_id is required for logging at 'info' level and above"
@@ -135,26 +140,27 @@ class DiagnosticsLogger:
         self.logger.log(level, message, extra=self._make_extra(message_id, extras, kwextras))
         self.message_counts[level] += 1
 
-    def critical(self, msg_id_or_msg: str, msg_or_first_extra: Any=None, *extras, **kwextras):
-        self._log(logging.CRITICAL, msg_id_or_msg, msg_or_first_extra, extras, kwextras)
+    def critical(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self._log(logging.CRITICAL, msg_id_or_msg, msg_and_or_extras, kwextras)
 
-    def error(self, msg_id_or_msg: str, msg_or_first_extra: Any=None, *extras, **kwextras):
-        self._log(logging.ERROR, msg_id_or_msg, msg_or_first_extra, extras, kwextras)
+    def error(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self._log(logging.ERROR, msg_id_or_msg, msg_and_or_extras, kwextras)
 
-    def warning(self, msg_id_or_msg: str, msg_or_first_extra: Any=None, *extras, **kwextras):
-        self._log(logging.WARNING, msg_id_or_msg, msg_or_first_extra, extras, kwextras)
+    def warning(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self._log(logging.WARNING, msg_id_or_msg, msg_and_or_extras, kwextras)
 
-    def hint(self, msg_id_or_msg: str, msg_or_first_extra: Any=None, *extras, **kwextras):
-        self._log(HINT, msg_id_or_msg, msg_or_first_extra, extras, kwextras)
+    def hint(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self._log(HINT, msg_id_or_msg, msg_and_or_extras, kwextras)
 
-    def info(self, msg_id_or_msg: str, msg_or_first_extra: Any=None, *extras, **kwextras):
-        self._log(logging.INFO, msg_id_or_msg, msg_or_first_extra, extras, kwextras)
+    def info(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self._log(logging.INFO, msg_id_or_msg, msg_and_or_extras, kwextras)
 
-    def detail(self, msg_id_or_msg: str, msg_or_first_extra: Any=None, *extras, **kwextras):
-        self._log(DETAIL, msg_id_or_msg, msg_or_first_extra, extras, kwextras)
+    def detail(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self._log(DETAIL, msg_id_or_msg, msg_and_or_extras, kwextras)
 
-    def debug(self, msg_id_or_msg: str, msg_or_first_extra: Any=None, *extras, **kwextras):
-        self._log(logging.DEBUG, msg_id_or_msg, msg_or_first_extra, extras, kwextras)
+    def debug(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self._log(logging.DEBUG, msg_id_or_msg, msg_and_or_extras, kwextras)
+
 
 class DiagnosticRecordFormatter(logging.Formatter):
     """Format log messages in a compiler-like format for console display."""

@@ -23,18 +23,18 @@ def run_action(has_exclamation: bool, action_name: str, raw_args: str, source_lo
     matches: list[Action] = core_state.actions.lookup_action(action_name)
     match len(matches):
         case 0:
-            state.log.error("action-not-found", f"could not find action {action_name}", source_loc)
+            state.log.error("action-not-found", f"couldn't run action '{action_name}'. action not found.", source_loc)
         case 1:
             action = matches[0]
             if action.exclamation_only and not has_exclamation:
-                state.log.error("excl-only-action-without-excl", f"action '{action_name}' is !-only but written without a '!'", source_loc)
+                state.log.error("excl-only-action-without-excl", f"didn't run action '{action_name}'. action is !-only but written without a '!'", source_loc)
                 return None
 
             context = ActionContext(state=state, root_config=state.root_config, plugin_config=action.plugin_config, source_loc=source_loc, log=state.log)
             return action.function(action_name, raw_args, context)
         case _:
             alternatives = _join_alternatives([action.qualified_name for action in matches])
-            state.log.error("ambiguous-action-name", f"action name '{action_name}' is ambiguous, did you mean: {alternatives}", source_loc)
+            state.log.error("ambiguous-action-name", f"didn't run action '{action_name}'. action name is ambiguous, did you mean: {alternatives}", source_loc)
     return None
 
 # process '%' commands -------------------------------------------------------
@@ -61,7 +61,7 @@ def _interpret_command(command_text: str, is_final_message: bool, source_loc: So
       [!] action-name [... args ...]
     or
       [!] field-name = value string
-    where action-name and field-name have the same permitted characters: alphanumeric, -_.\/
+    where action-name and field-name have the same permitted characters: alphanumeric, -_./
     """
     result = None
     if match := re.match(command_regex, command_text):
@@ -75,14 +75,14 @@ def _interpret_command(command_text: str, is_final_message: bool, source_loc: So
             if equals_sign:
                 # assignment:
                 if len(RHS) == 0: # missing right hand side of assignment
-                    state.log.warning("skiping-empty-assignment", f"skipping assignment command with no right-hand-side '{command_text}'", source_loc)
+                    state.log.error("skiping-empty-assignment", f"skipping configuration assignment with no right-hand-side '{command_text}'", source_loc)
                 else:
                     assign_configuration_field(state.root_config, name, RHS, source_loc, state.log)
             else:
                 # action:
                 result = run_action(has_exclamation, name, RHS, source_loc, state)
     else:
-        state.log.warning("unknown-command", f"warning: could not interpret command '{command_text}'", source_loc)
+        state.log.error("unknown-command", f"couldn't interpret command '{command_text}'", source_loc)
     return result
 
 def interpret_commands(message_sequence: list[Message], state: ExecutionState) -> None:

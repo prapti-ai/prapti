@@ -181,7 +181,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
             responder_name, responder_context = lookup_active_responder(state)
             if not responder_context:
-                state.log.critical("responder-not-found", f"couldn't find responder '{responder_name}'. can't generate a response without a responder. sorry.", state.file_name)
+                state.log.critical("active-responder-not-found", f"couldn't generate a response, sorry. the active responder '{responder_name}' was not found.", state.file_name)
                 return 1
             state.selected_responder_context = responder_context
 
@@ -220,6 +220,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             file.close() # ensure flush and close prior to calling on_response_completed
             core_state.hooks_distributor.on_response_completed()
         else:
-            state.log.error("no-response", "no response generated. sorry.", state.file_name)
+            state.log.error("no-response", "no response generated, sorry.", state.file_name)
 
     return 0 # success

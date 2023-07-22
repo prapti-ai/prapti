@@ -37,6 +37,7 @@ class RootConfiguration:
 
     # global/generic parameter aliases
     # if you set one of these in your markdown it will override the model-specific parameter that it aliases
+    # FIXME TODO: allow global vars to be |None or unset
     model: str = None
     temperature: float = None
     n: int = None # number of responses to generate
@@ -47,7 +48,7 @@ def assign_configuration_field(root_config: RootConfiguration, original_field_na
     while '.' in field_name:
         source, field_name = field_name.split('.', maxsplit=1)
         if not hasattr(target, source):
-            log.error("unknown-field-component", f"unknown configuration field '{original_field_name}', component '{source}' does not exist, skipping command", source_loc)
+            log.error("unknown-field-component", f"skipping configuration assignment. unknown configuration field '{original_field_name}', component '{source}' does not exist", source_loc)
             return
         target = getattr(target, source)
 
@@ -62,6 +63,6 @@ def assign_configuration_field(root_config: RootConfiguration, original_field_na
         except Exception as e:
             raise ValueError(f"error coercing configuration value '{field_value}' to a '{field_type}'") from e
         setattr(target, field_name, assigned_value)
-        log.detail("set-field", f"setting configuration.{original_field_name} = {parsed_value}", source_loc)
+        log.detail("set-field", f"setting configuration field: {original_field_name} = {parsed_value}", source_loc)
     else:
-        log.error("unknown-field", f"unknown configuration field '{original_field_name}', skipping command", source_loc)
+        log.error("unknown-field", f"skipping configuration assignment. unknown configuration field '{original_field_name}'", source_loc)

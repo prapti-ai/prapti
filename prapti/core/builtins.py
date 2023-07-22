@@ -59,7 +59,7 @@ def load_plugin(plugin, source_loc: SourceLocation, state: ExecutionState):
             plugin_hooks.on_plugin_loaded(hooks_context)
             core_state.hooks_distributor.add_hooks(hooks_context)
     except Exception as e:
-        state.log.error("load-plugin-exception", f"exception while loading plugin {plugin.name}: {repr(e)}", source_loc)
+        state.log.error("load-plugin-exception", f"exception while loading plugin '{plugin.name}': {repr(e)}", source_loc)
         state.log.logger.debug(e, exc_info=True)
 
 @builtin_actions.add_action("plugins.load")
@@ -71,7 +71,7 @@ def plugins_load(name: str, raw_args: str, context: ActionContext) -> None|str|M
         if plugin not in core_state.loaded_plugins:
             load_plugin(plugin, context.source_loc, context.state)
     else:
-        context.log.warning("plugin-not-found", f"couldn't load plugin '{plugin_name}'. not found.", context.source_loc)
+        context.log.error("plugin-not-found", f"couldn't load plugin '{plugin_name}'. plugin not found.", context.source_loc)
     return None
 
 @builtin_actions.add_action("!plugins.list")
@@ -113,9 +113,9 @@ def responder_new(name: str, raw_args: str, context: ActionContext) -> None|str|
                 core_state.responder_contexts[responder_name] = responder_context
                 setattr(context.root_config.responders, responder_name, responder_context.responder_config)
             else:
-                context.log.error("failed-responder-new", "responder.new: '{plugin_name}' did not construct responder.", context.source_loc)
+                context.log.error("failed-responder-new", "couldn't construct responder '{responder_name}'. plugin '{plugin_name}' did not construct responder.", context.source_loc)
     else:
-        context.log.error("plugin-not-found", "couldn't locate responder provider plugin '{plugin_name}'. not found.", context.source_loc)
+        context.log.error("plugin-not-found", "couldn't locate responder provider plugin '{plugin_name}'. plugin not found.", context.source_loc)
 
 @builtin_actions.add_action("responder.push")
 def responder_push(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
