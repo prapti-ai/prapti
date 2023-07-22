@@ -183,7 +183,7 @@ class OpenAIChatResponder(Responder):
             current_time = str(datetime.datetime.now())
             d = asdict(chat_parameters)
             d["messages"] = ["..."] # avoid overly long output
-            return [Message(role="assistant", name=None, content=f"dry run mode. {current_time}\nchat_parameters = {d}")]
+            return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nchat_parameters = {d}"])]
 
         # docs: https://platform.openai.com/docs/api-reference/chat/create
         response = openai.ChatCompletion.create(**asdict(chat_parameters))
@@ -191,11 +191,11 @@ class OpenAIChatResponder(Responder):
 
         if len(response["choices"]) == 1:
             choice = response["choices"][0]
-            result = [Message(role="assistant", name=None, content=choice.message["content"].strip())]
+            result = [Message(role="assistant", name=None, content=[choice.message["content"].strip()])]
         else:
             result = []
             for i, choice in enumerate(response["choices"], start=1):
-                result.append(Message(role="assistant", name=str(i), content=choice.message["content"].strip()))
+                result.append(Message(role="assistant", name=str(i), content=[choice.message["content"].strip()]))
         return result
 
 class OpenAIChatResponderPlugin(Plugin):
