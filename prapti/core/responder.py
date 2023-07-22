@@ -5,7 +5,7 @@
     that run agents, tree-of-thoughts prompting routines and the like.
 """
 import abc
-from typing import Any, Optional
+from typing import Any
 from dataclasses import dataclass
 
 from .command_message import Message
@@ -27,9 +27,9 @@ class Responder(metaclass=abc.ABCMeta):
     """Base class for responders"""
 
     @abc.abstractmethod
-    def construct_configuration(self, context: ResponderContext) -> Optional[Any]:
+    def construct_configuration(self, context: ResponderContext) -> Any|None:
         pass
 
     @abc.abstractmethod
-    def generate_responses(self, input: list[Message], context: ResponderContext) -> list[Message]:
+    def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
         pass

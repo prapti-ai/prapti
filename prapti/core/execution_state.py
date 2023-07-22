@@ -1,4 +1,4 @@
-
+from typing import Any
 from dataclasses import dataclass, field
 import pathlib
 
@@ -21,4 +21,4 @@ class ExecutionState:
 
     selected_responder_context: ResponderContext|None = None
 
-    _core_state = None # 'CoreExecutionState'|None private to core
+    _core_state: Any|None = None # 'CoreExecutionState'|None private to core
