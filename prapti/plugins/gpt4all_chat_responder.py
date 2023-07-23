@@ -25,8 +25,9 @@ import gpt4all
 from ..core.plugin import Plugin
 from ..core.command_message import Message
 from ..core.responder import Responder, ResponderContext
+from ..core.logger import DiagnosticsLogger
 
-def convert_message_sequence_to_text_prompt(message_sequence: list[Message]) -> str:
+def convert_message_sequence_to_text_prompt(message_sequence: list[Message], log: DiagnosticsLogger) -> str:
     # a hack, based on: https://github.com/nomic-ai/gpt4all/pull/652
     # note we are currently ignoring message.name
 
@@ -34,6 +35,10 @@ def convert_message_sequence_to_text_prompt(message_sequence: list[Message]) -> 
     for message in message_sequence:
         if not message.is_enabled or message.is_private:
             continue # skip disabled and private messages
+
+        if message.role not in ["system", "user", "assistant"]:
+            log.warning("unrecognised-public-role", f"message will not be included in LLM prompt. public role '{message.role}' is not recognised.", message.source_loc)
+            continue
 
         assert len(message.content) == 1 and isinstance(message.content[0], str), "gpt4all.chat: expected flattened message content"
         match message.role:
@@ -94,7 +99,7 @@ class GPT4AllChatResponder(Responder):
             d = asdict(config)
             return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {d}"])]
 
-        prompt = convert_message_sequence_to_text_prompt(input_)
+        prompt = convert_message_sequence_to_text_prompt(input_, context.log)
 
         model = gpt4all.GPT4All(model_name = config.model_name,
                                 model_path = config.model_path,
