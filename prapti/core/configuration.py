@@ -3,7 +3,7 @@
     configure actions, responders, hooks, plugins, etc.
 """
 from dataclasses import dataclass, field
-import ast
+import json
 from .logger import DiagnosticsLogger
 from .source_location import SourceLocation
 
@@ -54,14 +54,16 @@ def assign_configuration_field(root_config: RootConfiguration, original_field_na
 
     if hasattr(target, field_name):
         try:
-            parsed_value = ast.literal_eval(field_value)
+            parsed_value = json.loads(field_value)
         except (ValueError, SyntaxError) as e:
-            raise ValueError(f"error parsing configuration value '{field_value}' as a Python literal: {e}") from e
+            log.error("config-value-json-parse-error", f"could not parse configuration value '{field_value}' as JSON: {e}", source_loc)
+            return
         field_type = target.__annotations__.get(field_name)
         try:
             assigned_value = field_type(parsed_value)
         except Exception as e:
-            raise ValueError(f"error coercing configuration value '{field_value}' to a '{field_type}'") from e
+            log.error("config-value-coercion-failure", f"could not coerce configuration value '{field_value}' to a '{field_type}'", source_loc)
+            return
         setattr(target, field_name, assigned_value)
         log.detail("set-field", f"setting configuration field: {original_field_name} = {parsed_value}", source_loc)
     else:
