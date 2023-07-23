@@ -17,7 +17,7 @@ command_line_regex = re.compile(r"^(?:[ ]{0,3}\>\s*)?(\/\/)?\s*%\s*(.*)\n")
 
 def parse_messages(lines: list[str], file_path: pathlib.Path|None) -> list[Message]:
     """partition lines of a chat markdown document into a sequence of messages."""
-    current_message = Message(role="_head", name=None, content=[], _is_enabled=True, source_loc=SourceLocation(file_path=file_path, line=0))
+    current_message = Message(role="_head", name=None, content=[], is_enabled=True, source_loc=SourceLocation(file_path=file_path, line=0))
     result = [current_message]
     for line_no, line in enumerate(lines, start=1):
         if not line.endswith("\n"):
@@ -26,7 +26,7 @@ def parse_messages(lines: list[str], file_path: pathlib.Path|None) -> list[Messa
         if command_match := re.match(command_line_regex, line):
             is_enabled = command_match.group(1) != "//"
             source_loc = SourceLocation(file_path=file_path, line=line_no)
-            current_message.content.append(Command(text=command_match.group(2).strip(), _is_enabled=is_enabled, source_loc=source_loc))
+            current_message.content.append(Command(text=command_match.group(2).strip(), is_enabled=is_enabled, source_loc=source_loc))
 
         elif message_match := re.match(message_delimiter_regex, line):
             # found message delimeter
@@ -36,7 +36,7 @@ def parse_messages(lines: list[str], file_path: pathlib.Path|None) -> list[Messa
 
             # start new message
             source_loc = SourceLocation(file_path=file_path, line=line_no)
-            current_message = Message(role=role, name=name, content=[], _is_enabled=is_enabled, source_loc=source_loc)
+            current_message = Message(role=role, name=name, content=[], is_enabled=is_enabled, source_loc=source_loc)
             result.append(current_message)
         else:
             # append line to current mesage content

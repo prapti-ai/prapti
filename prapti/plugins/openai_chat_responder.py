@@ -128,7 +128,7 @@ def get_model_token_limit(model: str) -> int:
 def convert_message_sequence_to_openai_messages(message_sequence: list[Message]) -> list[dict]:
     result = []
     for message in message_sequence:
-        if not message.is_enabled() or message.is_private():
+        if not message.is_enabled or message.is_private:
             continue # skip disabled and private messages
 
         assert len(message.content) == 1 and isinstance(message.content[0], str), "openai.chat: expected flattened message content"

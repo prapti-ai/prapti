@@ -87,7 +87,7 @@ def default_load_config_files(state: ExecutionState):
 def find_final_prompt_message(messages: list[Message]) -> Message|None:
     """a prompt message is a message that will form part of the prompt. it is not hidden or disabled"""
     try:
-        return next(msg for msg in reversed(messages) if msg.is_enabled() and msg.role in ("system", "user", "assistant"))
+        return next(msg for msg in reversed(messages) if msg.is_enabled and msg.role in ("system", "user", "assistant"))
     except StopIteration: # next() found no viable final message
         return None
 
@@ -99,7 +99,7 @@ def find_final_user_message(messages: list[Message]) -> Message|None:
 
 def write_message(file: TextIO, m: Message):
     role_and_name = (m.role + "/" + m.name) if m.name else m.role
-    file.write(f"\n### {'' if m.is_enabled() else '//'}@{role_and_name}:\n")
+    file.write(f"\n### {'' if m.is_enabled else '//'}@{role_and_name}:\n")
     content = ''.join(m.content).strip() # FIXME assumed flattened content
     if content:
         file.write(f"\n{content}\n")

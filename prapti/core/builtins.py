@@ -84,7 +84,7 @@ def plugins_list(name: str, raw_args: str, context: ActionContext) -> None|str|M
     else:
         content = "No plugins found."
 
-    return Message("_prapti", "plugins", [content], _is_enabled=False)
+    return Message("_prapti", "plugins", [content], is_enabled=False)
 
 # ----------------------------------------------------------------------------
 # responder management

@@ -89,8 +89,8 @@ def interpret_commands(message_sequence: list[Message], state: ExecutionState) -
     """"for each enabled message in the sequence, interpret enabled commands. store command results in command.result field"""
     final_message = message_sequence[-1] # FIXME: this won't work as intened if we invoke interpret_commands multiple times e.g. for config files
     for message in message_sequence:
-        if message.is_enabled():
+        if message.is_enabled:
             is_final_message = message is final_message
             for item in message.content:
-                if isinstance(item, Command) and item.is_enabled():
+                if isinstance(item, Command) and item.is_enabled:
                     item.result = _interpret_command(command_text=item.text, is_final_message=is_final_message, source_loc=item.source_loc, state=state)
