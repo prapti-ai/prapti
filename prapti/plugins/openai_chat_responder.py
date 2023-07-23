@@ -153,33 +153,33 @@ class OpenAIChatResponder(Responder):
 
     def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
         chat_parameters: OpenAIChatParameters = context.responder_config
-        context.log.debug(f"openai.chat: {chat_parameters = }")
+        context.log.debug(f"openai.chat: {chat_parameters = }", context.state.input_file_path)
         # REVIEW: we should be treating the parameters as read-only here
 
         # propagate top-level parameter aliases:
         for name in ("model", "temperature", "n"):
             if (value := getattr(context.root_config, name, None)) is not None:
-                context.log.debug(f"{name}, {value}")
+                context.log.debug(f"openai.chat: {name}, {value}", context.state.input_file_path)
                 setattr(chat_parameters, name, value)
 
         chat_parameters.messages = convert_message_sequence_to_openai_messages(input_)
 
         # clamp requested completion token count to avoid API error if we ask for more than can be provided
         prompt_token_count = num_tokens_from_messages(chat_parameters.messages, model=chat_parameters.model, log=context.log)
-        context.log.debug(f"openai.chat: {prompt_token_count = }")
+        context.log.debug(f"openai.chat: {prompt_token_count = }", context.state.input_file_path)
         model_token_limit = get_model_token_limit(chat_parameters.model)
         # NB: chat_parameters.max_tokens is the maximum response tokens
         if prompt_token_count + chat_parameters.max_tokens > model_token_limit:
             chat_parameters.max_tokens = model_token_limit - prompt_token_count
             if chat_parameters.max_tokens > 0:
-                context.log.info("openai.chat-clamping-max-tokens", f"openai.chat: clamping requested completion to {chat_parameters.max_tokens} max tokens")
+                context.log.info("openai.chat-clamping-max-tokens", f"openai.chat: clamping requested completion to {chat_parameters.max_tokens} max tokens", context.state.input_file_path)
             else:
-                context.log.info("openai.chat-at-token-limit", "openai.chat: token limit reached. exiting")
+                context.log.info("openai.chat-at-token-limit", "openai.chat: token limit reached. exiting", context.state.input_file_path)
                 return []
 
         context.log.debug(f"openai.chat: {chat_parameters = }")
         if context.root_config.dry_run:
-            context.log.info("openai.chat-dry-run", "openai.chat: dry run: bailing before hitting the OpenAI API")
+            context.log.info("openai.chat-dry-run", "openai.chat: dry run: bailing before hitting the OpenAI API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
             d = asdict(chat_parameters)
             d["messages"] = ["..."] # avoid overly long output
@@ -187,7 +187,7 @@ class OpenAIChatResponder(Responder):
 
         # docs: https://platform.openai.com/docs/api-reference/chat/create
         response = openai.ChatCompletion.create(**asdict(chat_parameters))
-        context.log.debug(f"openai.chat: {response = }")
+        context.log.debug(f"openai.chat: {response = }", context.state.input_file_path)
 
         if len(response["choices"]) == 1:
             choice = response["choices"][0]

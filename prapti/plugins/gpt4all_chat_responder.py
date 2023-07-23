@@ -82,14 +82,14 @@ class GPT4AllChatResponder(Responder):
 
     def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
         config: GPT4AllResponderConfiguration = context.responder_config
-        context.log.debug(f"gpt4all.chat: {config = }")
+        context.log.debug(f"gpt4all.chat: {config = }", context.state.input_file_path)
 
         #TODO: support global model and n
         if (value := getattr(context.root_config, "temperature", None)) is not None:
             config.temp = value
 
         if context.root_config.dry_run:
-            context.log.info("gpt4all.chat-dry-run", "gpt4all.chat: dry run: bailing before hitting the GPT4All API")
+            context.log.info("gpt4all.chat-dry-run", "gpt4all.chat: dry run: bailing before hitting the GPT4All API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
             d = asdict(config)
             return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {d}"])]
@@ -103,7 +103,7 @@ class GPT4AllChatResponder(Responder):
                                 n_threads = config.n_threads if config.n_threads > 0 else None)
 
         generate_args = generate_args_from(config)
-        context.log.debug(f"gpt4all.chat: {generate_args = }")
+        context.log.debug(f"gpt4all.chat: {generate_args = }", context.state.input_file_path)
         if config.streaming:
             response = ""
             sys.stdout.flush()

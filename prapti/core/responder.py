@@ -14,6 +14,7 @@ from .logger import DiagnosticsLogger
 
 @dataclass
 class ResponderContext:
+    state: 'ExecutionState'
     plugin_name: str
     root_config: RootConfiguration
     plugin_config: Any

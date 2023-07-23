@@ -106,7 +106,8 @@ def responder_new(name: str, raw_args: str, context: ActionContext) -> None|str|
         if plugin in core_state.loaded_plugins:
             if responder := plugin.construct_responder():
                 plugin_config = getattr(context.root_config.plugins, plugin_name, None)
-                responder_context = ResponderContext(plugin_name=plugin_name,
+                responder_context = ResponderContext(state=context.state,
+                                                     plugin_name=plugin_name,
                                                      root_config=context.root_config, plugin_config=plugin_config, responder_config=EmptyResponderConfiguration(),
                                                      responder_name=responder_name, responder=responder, log=context.log)
                 responder_context.responder_config = responder.construct_configuration(responder_context) or responder_context.responder_config
