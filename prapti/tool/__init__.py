@@ -62,7 +62,7 @@ def load_config_file(config_path: pathlib.Path, state: ExecutionState) -> bool:
 def default_load_config_files(state: ExecutionState):
     """default configuration loading algorithm:
         - ~/.config/prapti/config.md
-        - .prapticonfig.md in containing directories up to when %config_root = True
+        - .prapticonfig.md in containing directories up to when %config_root = true
         - fallback to fallback_config_file_data if no config files found (just so that we work out of the box)
     """
     found_config_file = False
@@ -72,12 +72,12 @@ def default_load_config_files(state: ExecutionState):
 
     # in-tree `.prapticonfig.md` files:
     # (.editorconfig algorithm) starting from the directory containing the input markdown file,
-    # load `.prapticonfig.md`. Iterate up the tree until a config file sets config_root = True
+    # load `.prapticonfig.md`. Iterate up the tree until a config file sets config_root = true
     state.root_config.config_root = False
     for parent in state.input_file_path.resolve().parents:
         found_config_file = load_config_file(parent / ".prapticonfig.md", state)
         if found_config_file and state.root_config.config_root:
-            break # stop once we hit a config file with `%config_root = True`
+            break # stop once we hit a config file with `%config_root = true`
 
     # if no config file is present, use fallback config
     if not found_config_file:
@@ -222,4 +222,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             state.log.error("no-response", "no response generated, sorry.", state.input_file_path)
 
-    return 0 # success
+    if state.log.critical_count() == 0 and state.log.error_count() == 0:
+        return 0 # success
+    else:
+        return 1 # failure
