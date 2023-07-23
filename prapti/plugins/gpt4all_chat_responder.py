@@ -32,7 +32,7 @@ def convert_message_sequence_to_text_prompt(message_sequence: list[Message]) -> 
 
     result = ""
     for message in message_sequence:
-        if not message.is_enabled() or message.is_private():
+        if not message.is_enabled or message.is_private:
             continue # skip disabled and private messages
 
         assert len(message.content) == 1 and isinstance(message.content[0], str), "gpt4all.chat: expected flattened message content"

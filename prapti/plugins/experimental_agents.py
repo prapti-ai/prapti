@@ -88,7 +88,7 @@ class AgentsHooks(Hooks):
         pass
 
     def _update_pending_at_mentions(self, message: Message, pending_at_mentions: set[str]):
-        if not message.is_enabled() or message.role == "system":
+        if not message.is_enabled or message.role == "system":
             return
 
         # an @-mention is no longer pending once the named agent speaks
@@ -126,7 +126,7 @@ class AgentsHooks(Hooks):
             X = set(context.plugin_config._discussion_group)
             if len(X) > 1:
                 for message in reversed(context.state.message_sequence):
-                    if message.is_enabled() and message.name in context.plugin_config._discussion_group and message.name in X:
+                    if message.is_enabled and message.name in context.plugin_config._discussion_group and message.name in X:
                         X.remove(message.name)
                         if len(X) == 1:
                             break
@@ -154,7 +154,7 @@ class AgentsHooks(Hooks):
                     # retain only global system messages (those without a name)
                     # and system messages for the active agent. disable other system messages.
                     if message.name and message.name != selected_agent_name:
-                        message._is_enabled = False
+                        message.is_enabled = False
                         context.plugin_config._disabled_messages.append(message)
                 case "assistant":
                     if message.name != selected_agent_name:
@@ -170,7 +170,7 @@ class AgentsHooks(Hooks):
 
         # restore message enable and role for next round (in case there is a followup)
         for message in context.plugin_config._disabled_messages:
-            message._is_enabled = True
+            message.is_enabled = True
         context.plugin_config._disabled_messages.clear()
 
         for message in context.plugin_config._assistant_messages_switched_to_user:

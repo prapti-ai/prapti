@@ -11,14 +11,11 @@ from .source_location import SourceLocation
 @dataclass
 class Command:
     text: str # begins with the first non-whitespace character after '%', does not include trailing '\n'
-    _is_enabled: bool = True
+    is_enabled: bool = True
     result: str|Any|None = None # str|'Message'|None
     source_loc: SourceLocation = field(default_factory=SourceLocation)
 
-    def is_enabled(self):
-        return self._is_enabled
-
-    def result_is_empty(self):
+    def result_is_empty(self) -> bool:
         # non-None non-empty action result
         return self.result is None or (isinstance(self.result, str) and (len(self.result) == 0 or self.result.isspace()))
 
@@ -29,12 +26,10 @@ class Message:
     content: list[str|Command|None]
         # ^^^ allow embedded inline commands e.g. for file inclusion
         # also allow "None" items so that command outputs can be re-written to None without otherwise modifying the list
-    _is_enabled: bool = True
+    is_enabled: bool = True
     source_loc: SourceLocation = field(default_factory=SourceLocation)
 
-    def is_enabled(self) -> bool:
-        return self._is_enabled
-
+    @property
     def is_private(self) -> bool:
         return self.role.startswith("_")
 
