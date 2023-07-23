@@ -33,9 +33,11 @@ class ActionNamespace:
         # actions keyed by unqualified name
         self._actions: defaultdict[str, list[Action]] = defaultdict(list)
 
-    def merge_into(self, other: 'ActionNamespace'):
-        for k,v in self._actions.items():
-            other._actions[k] += v
+    def merge(self, other: 'ActionNamespace') -> None:
+        """Update the namespace with actions from *other* by
+           merging actions from *other* into the list of existing actions with a given name."""
+        for k,v in other._actions.items():
+            self._actions[k] += v
 
     def _add_action(self, raw_qualified_name: str, function: Callable[[str, str, ActionContext], None|str|Message], exclamation_only:bool|None=None):
         qualified_name = raw_qualified_name.lstrip("!")

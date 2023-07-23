@@ -121,7 +121,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     state = ExecutionState(log=create_diagnostics_logger(), input_file_path=pathlib.Path(command_line_args.filename))
     core_state = CoreExecutionState()
     state._core_state = core_state
-    builtin_actions.merge_into(core_state.actions)
+    core_state.actions.merge(builtin_actions)
     state.root_config.dry_run = command_line_args.dry_run
     state.root_config.strict = command_line_args.strict
 

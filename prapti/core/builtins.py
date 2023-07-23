@@ -52,7 +52,7 @@ def load_plugin(plugin, source_loc: SourceLocation, state: ExecutionState):
         setattr(state.root_config.plugins, plugin.name, plugin_config)
         if plugin_actions:
             plugin_actions.set_plugin_config(plugin_config)
-            plugin_actions.merge_into(core_state.actions)
+            core_state.actions.merge(plugin_actions)
         core_state.loaded_plugins.add(plugin)
         if plugin_hooks:
             hooks_context = hooks.HooksContext(state=state, root_config=state.root_config, plugin_config=plugin_config, hooks=plugin_hooks)
