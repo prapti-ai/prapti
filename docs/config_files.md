@@ -7,7 +7,7 @@ Prapti uses configuration files to store setup details and parameter settings. T
 Before processing the input markdown file, Prapti searches for configuration files. The search process includes:
 
 1. Loading a user configuration file from the user's home directory (e.g., `~/.prapti/config.md`) if it exists.
-2. Searching for `.prapticonfig.md` files in the directory of the input markdown file and its parent directories. This search continues upwards until a configuration file with a line `% config_root = True` is found. These files form the in-tree configuration file set.
+2. Searching for `.prapticonfig.md` files in the directory of the input markdown file and its parent directories. This search continues upwards until a configuration file with a line `% config_root = true` is found. These files form the in-tree configuration file set.
 3. Loading the in-tree configuration files, starting from the root and moving towards the input file's directory. This way, settings in `.prapticonfig.md` files closer to the input file take precedence over settings from files closer to the root.
 
 ## Fallback Configuration

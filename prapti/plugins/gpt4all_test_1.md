@@ -31,7 +31,7 @@ We also tried the following model. The `//` means the following configuration li
 Set n_threads according to the number of performance cores available on your machine. Or comment out that line (`//`) to let GPT4All decide.
 
 %responders.default.n_threads = 8
-%responders.default.streaming = True
+%responders.default.streaming = true
 %responders.default.temp = 1
 
 ### @user:
