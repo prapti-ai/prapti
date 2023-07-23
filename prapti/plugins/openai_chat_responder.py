@@ -125,11 +125,15 @@ def get_model_token_limit(model: str) -> int:
 
 # ----------------------------------------------------------------------------
 
-def convert_message_sequence_to_openai_messages(message_sequence: list[Message]) -> list[dict]:
+def convert_message_sequence_to_openai_messages(message_sequence: list[Message], log: DiagnosticsLogger) -> list[dict]:
     result = []
     for message in message_sequence:
         if not message.is_enabled or message.is_private:
             continue # skip disabled and private messages
+
+        if message.role not in ["system", "user", "assistant"]:
+            log.warning("unrecognised-public-role", f"message will not be included in LLM prompt. public role '{message.role}' is not recognised.", message.source_loc)
+            continue
 
         assert len(message.content) == 1 and isinstance(message.content[0], str), "openai.chat: expected flattened message content"
         m = {
@@ -162,7 +166,7 @@ class OpenAIChatResponder(Responder):
                 context.log.debug(f"openai.chat: {name}, {value}", context.state.input_file_path)
                 setattr(chat_parameters, name, value)
 
-        chat_parameters.messages = convert_message_sequence_to_openai_messages(input_)
+        chat_parameters.messages = convert_message_sequence_to_openai_messages(input_, context.log)
 
         # clamp requested completion token count to avoid API error if we ask for more than can be provided
         prompt_token_count = num_tokens_from_messages(chat_parameters.messages, model=chat_parameters.model, log=context.log)
