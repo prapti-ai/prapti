@@ -115,3 +115,4 @@ See [our documentation](docs/editor_tweaks.md) for optional text editor setup to
 ## License
 
 This project is [MIT](LICENSE) licensed.
+
