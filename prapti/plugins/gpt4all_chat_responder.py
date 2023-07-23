@@ -40,6 +40,9 @@ def convert_message_sequence_to_text_prompt(message_sequence: list[Message], log
             log.warning("unrecognised-public-role", f"message will not be included in LLM prompt. public role '{message.role}' is not recognised.", message.source_loc)
             continue
 
+        # HACK WARNING: not all LLMs use the same chat structure delimiters.
+        # the following format will perform badly if it is not consistent with the fine-tuning of the selected model.
+        # ideally, we will delegate chat structure formatting to our dependencies.
         assert len(message.content) == 1 and isinstance(message.content[0], str), "gpt4all.chat: expected flattened message content"
         match message.role:
             case "system":
