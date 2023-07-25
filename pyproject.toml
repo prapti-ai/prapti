@@ -24,6 +24,7 @@ classifiers = [
   "Topic :: Text Processing :: Markup :: Markdown"
 ]
 dependencies = [
+    "pydantic >= 2.0.2",
     "openai >= 0.27.6",
     "tiktoken >= 0.4.0",
     "gpt4all >= 1.0.2"
