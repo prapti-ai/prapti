@@ -121,7 +121,7 @@ def _assign_configuration_field(root_config: RootConfiguration, config_field_nam
             log.error("config-value-json-parse-error", f"could not parse configuration value '{field_value}' as JSON: {repr(e)}", source_loc)
             return
         try:
-            log.detail("set-field", f"setting configuration field: {config_field_name} = {parsed_value}", source_loc)
+            log.detail("set-field", f"setting configuration field: {config_field_name} = {json.dumps(parsed_value)}", source_loc)
             setattr(target, field_name, parsed_value) # use pydantic for coercion and validation validation
         except Exception as e:
             log.error("invalid-field-assignment", f"could not assign configuration value '{field_value}': {repr(e)}", source_loc)
