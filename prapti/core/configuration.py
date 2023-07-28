@@ -12,9 +12,13 @@ from .source_location import SourceLocation
 
 class PraptiConfiguration(BaseModel):
     """Configuration that applies to Prapti as a whole"""
-    config_root: bool = False # halt in-tree configuration file search when true
-    dry_run: bool = False # simulate LLM responses. disable side-effects (plugin specific)
-    strict: bool = False # fail if errors are encountered (if strict is False, errors will be reported but prapti will try to continue where ever possible)
+    model_config = ConfigDict(
+        validate_assignment=True)
+
+    config_root: bool = Field(default=False, description="Halt in-tree configuration file search once set to `true`.")
+    dry_run: bool = Field(default=False, description="Simulate LLM responses. Disable plugin-specific side effects.")
+    strict: bool = Field(default=False, description="Halt if errors are encountered. If `strict` is `false`, errors will be reported but prapti will try to continue whenever possible).")
+
     responder_stack: list[str] = Field(default_factory=list)
 
 class PluginsConfiguration(SimpleNamespace):
