@@ -27,26 +27,22 @@
 # /// DANGER -- UNDER CONSTRUCTION ///////////////////////////////////////////
 
 import re
-from dataclasses import dataclass, field
 import typing
+
+from pydantic import BaseModel, Field
 
 from ..core.plugin import Plugin
 from ..core.action import ActionNamespace, ActionContext
 from ..core.hooks import Hooks, HooksContext
-from ..core.execution_state import ExecutionState
-from ..core.command_message import Command, Message
+from ..core.command_message import Message
 
 at_mention_regex = re.compile(r"@(\w+)")
 
 _actions: ActionNamespace = ActionNamespace()
 
-@dataclass
-class AgentsPluginConfiguration:
-    # TODO: we should not be storing private state in the configuration tree
-    _disabled_messages: list[Message] = field(default_factory=list)
-    _assistant_messages_switched_to_user: list[Message] = field(default_factory=list)
-    _n: int = 0 # counter of remaining generations
-    _discussion_group: set[str] = field(default_factory=set)
+class AgentsPluginConfiguration(BaseModel):
+    remaining_discussion_message_count: int = 0 # counter of remaining generations
+    discussion_group: list[str] = Field(default_factory=list)
 
 @_actions.add_action("agents.set_group")
 def set_group(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
@@ -55,7 +51,7 @@ def set_group(name: str, raw_args: str, context: ActionContext) -> None|str|Mess
         agents.set_group agent_name1 [agent_name2 ...]
     """
     args = raw_args.split()
-    context.plugin_config._discussion_group = set(args)
+    context.plugin_config.discussion_group = args
     return None
 
 @_actions.add_action("!agents.discuss")
@@ -70,9 +66,9 @@ def discuss(name: str, raw_args: str, context: ActionContext) -> None|str|Messag
         context.log.info("agents.discuss-usage", "usage: agents.discuss n [agent_name ...]", context.source_loc)
         return None
 
-    context.plugin_config._n = int(args[0])
+    context.plugin_config.remaining_discussion_message_count = int(args[0])
     if len(args) > 1:
-        context.plugin_config._discussion_group = set(args[1:])
+        context.plugin_config.discussion_group = args[1:]
 
     # TODO: when we add the ability for actions to insert messages before/after the current message
     # we can kick-off the discussion by @-mentioning the first participant in a private message
@@ -82,6 +78,8 @@ def discuss(name: str, raw_args: str, context: ActionContext) -> None|str|Messag
 
 class AgentsHooks(Hooks):
     def __init__(self):
+        self._disabled_messages: list[Message] = []
+        self._assistant_messages_switched_to_user: list[Message] = []
         pass
 
     def on_plugin_loaded(self, context: HooksContext):
@@ -119,14 +117,14 @@ class AgentsHooks(Hooks):
                 return name
         return None
 
-    def _find_least_recent_discussion_group_participant(self, context: HooksContext) -> str|None:
-        if context.plugin_config._discussion_group:
+    def _find_least_recenth_discussion_group_participant(self, context: HooksContext) -> str|None:
+        if context.plugin_config.discussion_group:
             # find the least recently participating discussion participant and give them a turn
             # return an arbitrary element if not all participants have sent a message
-            X = set(context.plugin_config._discussion_group)
+            X = set(context.plugin_config.discussion_group)
             if len(X) > 1:
                 for message in reversed(context.state.message_sequence):
-                    if message.is_enabled and message.name in context.plugin_config._discussion_group and message.name in X:
+                    if message.is_enabled and message.name in context.plugin_config.discussion_group and message.name in X:
                         X.remove(message.name)
                         if len(X) == 1:
                             break
@@ -136,7 +134,7 @@ class AgentsHooks(Hooks):
     def _select_agent(self, context: HooksContext) -> str|None:
         if pending_at_mentions := self._compute_pending_at_mentions(context):
             return self._pop_valid_pending_at_mention(pending_at_mentions, context)
-        return self._find_least_recent_discussion_group_participant(context)
+        return self._find_least_recenth_discussion_group_participant(context)
 
     def on_lookup_active_responder(self, responder_name: str, context: HooksContext) -> str:
         return self._select_agent(context) or responder_name
@@ -155,11 +153,11 @@ class AgentsHooks(Hooks):
                     # and system messages for the active agent. disable other system messages.
                     if message.name and message.name != selected_agent_name:
                         message.is_enabled = False
-                        context.plugin_config._disabled_messages.append(message)
+                        self._disabled_messages.append(message)
                 case "assistant":
                     if message.name != selected_agent_name:
                         message.role = "user" # other agents will appear to be users
-                        context.plugin_config._assistant_messages_switched_to_user.append(message)
+                        self._assistant_messages_switched_to_user.append(message)
                 case "user":
                     pass
                 case _:
@@ -169,13 +167,13 @@ class AgentsHooks(Hooks):
         """set name associated with response messages to agent's name"""
 
         # restore message enable and role for next round (in case there is a followup)
-        for message in context.plugin_config._disabled_messages:
+        for message in self._disabled_messages:
             message.is_enabled = True
-        context.plugin_config._disabled_messages.clear()
+        self._disabled_messages.clear()
 
-        for message in context.plugin_config._assistant_messages_switched_to_user:
+        for message in self._assistant_messages_switched_to_user:
             message.role = "assistant"
-        context.plugin_config._assistant_messages_switched_to_user.clear()
+        self._assistant_messages_switched_to_user.clear()
 
         # name assistant responses according to the name of the agent that generated them
         agent_name = context.state.selected_responder_context.responder_name
@@ -184,15 +182,15 @@ class AgentsHooks(Hooks):
                 message.name = agent_name
 
             # decrement discussion counter for any messages in discussion, whether @-mentions or other
-            if message.name in context.plugin_config._discussion_group:
-                context.plugin_config._n -= 1 if context.plugin_config._n else 0
+            if message.name in context.plugin_config.discussion_group:
+                context.plugin_config.remaining_discussion_message_count -= 1 if context.plugin_config.remaining_discussion_message_count else 0
 
     def on_response_completed(self, context: HooksContext):
         pass
 
     def on_followup(self, context: HooksContext) -> tuple[bool, list[Message]|None]:
-        if context.plugin_config._discussion_group and context.plugin_config._n > 0:
-            if agent_name := self._find_least_recent_discussion_group_participant(context):
+        if context.plugin_config.discussion_group and context.plugin_config.remaining_discussion_message_count > 0:
+            if agent_name := self._find_least_recenth_discussion_group_participant(context):
                 # trigger the agent by @-mentioning them. This will be picked up in on_before_generate_responses
                 # this hopefully ensures that all participants get a turn even if they are also @-messaging each other
                 return True, [Message(role="_prapti.experimental.agents", name=None, content=[f"@{agent_name}"])]

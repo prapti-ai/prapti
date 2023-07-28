@@ -1,4 +1,4 @@
-%plugins.load prapti.test.actions
+%plugins.load prapti.test.test_actions
 
 % temperature = 0.2
 % model = "gpt-3.5-turbo"

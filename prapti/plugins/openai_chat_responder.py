@@ -2,10 +2,11 @@
     Generate responses using the OpenAI chat API
 """
 import os
-from dataclasses import dataclass, asdict
 import datetime
 import typing
+import inspect
 
+from pydantic import BaseModel, Field, ConfigDict
 import openai
 import tiktoken
 
@@ -44,20 +45,62 @@ def setup_api_key_and_organization() -> None:
 
 # chat API parameters --------------------------------------------------------
 
-@dataclass
-class OpenAIChatParameters:
-    model: str = "gpt-3.5-turbo"
-    messages: list|None = None
-    temperature: float = 1
-    top_p: float = 1
-    max_tokens: int = 2000 # GPT 3.5 Turbo max content: 4096
-    n: int = 1 # how many completions to generate
-    #stop: Optional[Union[str, list]] = None
-    stop = None
-    presence_penalty: float = 0
-    frequency_penalty: float = 0
-    # logit_bias = # NOTE can't pass None for logit_bias
-    # user = # used for abuse monitoring only NOTE can't pass NONE
+class OpenAIChatResponderConfiguration(BaseModel):
+    """Configuration parameters for the OpenAI chat responder.
+    See the [OpenAI chat completions documentation](https://platform.openai.com/docs/api-reference/chat/create) for more information."""
+    model_config = ConfigDict(
+        validate_assignment=True,
+        protected_namespaces=()) # pydantic config: suppress warnings about `model` prefixed names
+
+    model: str = Field(default="gpt-3.5-turbo", description=inspect.cleandoc("""\
+        ID of the model to use. See the [model endpoint compatibility](https://platform.openai.com/docs/models/model-endpoint-compatibility)
+        table for details on which models work with the Chat API."""))
+
+    # messages: list|None = None (not available in configuration, injected by the responder)
+
+    temperature: float = Field(default=1.0, description=inspect.cleandoc("""\
+        What sampling temperature to use, between 0 and 2. Higher values like 0.8 will
+        make the output more random, while lower values like 0.2 will make it more focused and deterministic.
+
+        We generally recommend altering this or `top_p` but not both."""))
+
+    top_p: float = Field(default=1.0, description=inspect.cleandoc("""\
+        An alternative to sampling with temperature, called nucleus sampling,
+        where the model considers the results of the tokens with top_p probability mass.
+        So 0.1 means only the tokens comprising the top 10% probability mass are considered.
+
+        We generally recommend altering this or `temperature` but not both."""))
+
+    n: int = Field(default=1, description=inspect.cleandoc("""\
+        How many chat completion choices to generate for each input message."""))
+
+    # stream: bool (not supported, yet)
+
+    stop: str|list[str]|None = Field(default=None, description=inspect.cleandoc("""\
+        Up to 4 sequences where the API will stop generating further tokens."""))
+
+    max_tokens: int|None = Field(default=None, description=inspect.cleandoc("""\
+        The maximum number of tokens to generate in the chat completion.
+
+        The total length of input tokens and generated tokens is limited by the model's context length.
+        (GPT 3.5 Turbo max context: 4096 tokens)
+
+        When `max_tokens` is set to `null` no limit will be placed on the number of generated tokens,
+        except for that imposed by the model's context length."""))
+
+    presence_penalty: float = Field(default=0.0, description=inspect.cleandoc("""\
+        Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far,
+        increasing the model's likelihood to talk about new topics."""))
+
+    frequency_penalty: float = Field(default=0.0, description=inspect.cleandoc("""\
+        Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far,
+        decreasing the model's likelihood to repeat the same line verbatim."""))
+
+    # logit_bias (not currently supported)
+    # probably want to allow a dict[str,float] with the str causing a lookup to the token id, which is what the api expects
+
+    user: str|None = Field(default=None, description=inspect.cleandoc("""\
+        A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse."""))
 
 # count tokens ---------------------------------------------------------------
 
@@ -153,44 +196,49 @@ class OpenAIChatResponder(Responder):
         setup_api_key_and_organization()
 
     def construct_configuration(self, context: ResponderContext) -> typing.Any|None:
-        return OpenAIChatParameters()
+        return OpenAIChatResponderConfiguration()
 
     def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
-        chat_parameters: OpenAIChatParameters = context.responder_config
-        context.log.debug(f"openai.chat: {chat_parameters = }", context.state.input_file_path)
+        config: OpenAIChatResponderConfiguration = context.responder_config
+        context.log.debug(f"openai.chat: {config = }", context.state.input_file_path)
         # REVIEW: we should be treating the parameters as read-only here
 
-        # propagate top-level parameter aliases:
+        # propagate late-bound global variables:
         for name in ("model", "temperature", "n"):
-            if (value := getattr(context.root_config, name, None)) is not None:
-                context.log.debug(f"openai.chat: {name}, {value}", context.state.input_file_path)
-                setattr(chat_parameters, name, value)
+            if (value := getattr(context.root_config.vars, name, None)) is not None:
+                context.log.debug(f"openai.chat: binding config.{name} <- {value} from vars.{name}", context.state.input_file_path)
+                setattr(config, name, value)
 
-        chat_parameters.messages = convert_message_sequence_to_openai_messages(input_, context.log)
+        messages = convert_message_sequence_to_openai_messages(input_, context.log)
 
-        # clamp requested completion token count to avoid API error if we ask for more than can be provided
-        prompt_token_count = num_tokens_from_messages(chat_parameters.messages, model=chat_parameters.model, log=context.log)
-        context.log.debug(f"openai.chat: {prompt_token_count = }", context.state.input_file_path)
-        model_token_limit = get_model_token_limit(chat_parameters.model)
-        # NB: chat_parameters.max_tokens is the maximum response tokens
-        if prompt_token_count + chat_parameters.max_tokens > model_token_limit:
-            chat_parameters.max_tokens = model_token_limit - prompt_token_count
-            if chat_parameters.max_tokens > 0:
-                context.log.info("openai.chat-clamping-max-tokens", f"openai.chat: clamping requested completion to {chat_parameters.max_tokens} max tokens", context.state.input_file_path)
-            else:
-                context.log.info("openai.chat-at-token-limit", "openai.chat: token limit reached. exiting", context.state.input_file_path)
-                return []
+        if config.max_tokens is not None: # i.e. if we're not using the default
+            # clamp requested completion token count to avoid API error if we ask for more than can be provided
+            prompt_token_count = num_tokens_from_messages(messages, model=config.model, log=context.log)
+            context.log.debug(f"openai.chat: {prompt_token_count = }", context.state.input_file_path)
+            model_token_limit = get_model_token_limit(config.model)
+            # NB: config.max_tokens is the maximum response tokens
+            if prompt_token_count + config.max_tokens > model_token_limit:
+                config.max_tokens = model_token_limit - prompt_token_count
+                if config.max_tokens > 0:
+                    context.log.info("openai.chat-clamping-max-tokens", f"openai.chat: clamping requested completion to {config.max_tokens} max tokens", context.state.input_file_path)
+                else:
+                    context.log.info("openai.chat-at-token-limit", "openai.chat: token limit reached. exiting", context.state.input_file_path)
+                    return []
 
-        context.log.debug(f"openai.chat: {chat_parameters = }")
-        if context.root_config.dry_run:
+        context.log.debug(f"openai.chat: {config = }")
+        chat_args = config.model_dump(exclude_none=True, exclude_defaults=True)
+        chat_args["model"] = config.model # include model, even if it was left at default
+        context.log.debug(f"openai.chat: {chat_args = }")
+        chat_args["messages"] = messages
+
+        if context.root_config.prapti.dry_run:
             context.log.info("openai.chat-dry-run", "openai.chat: dry run: bailing before hitting the OpenAI API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
-            d = asdict(chat_parameters)
-            d["messages"] = ["..."] # avoid overly long output
-            return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nchat_parameters = {d}"])]
+            chat_args["messages"] = ["..."] # avoid overly long output
+            return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nchat_args = {chat_args}"])]
 
         # docs: https://platform.openai.com/docs/api-reference/chat/create
-        response = openai.ChatCompletion.create(**asdict(chat_parameters))
+        response = openai.ChatCompletion.create(**chat_args)
         context.log.debug(f"openai.chat: {response = }", context.state.input_file_path)
 
         if len(response["choices"]) == 1:

@@ -24,7 +24,7 @@ classifiers = [
   "Topic :: Text Processing :: Markup :: Markdown"
 ]
 dependencies = [
-    "pydantic >= 2.0.2",
+    "pydantic >= 2.1.1",
     "openai >= 0.27.6",
     "tiktoken >= 0.4.0",
     "gpt4all >= 1.0.2"
@@ -63,3 +63,4 @@ testpaths = [
 addopts = [
     "--import-mode=importlib",
 ]
+python_classes = "!Test"

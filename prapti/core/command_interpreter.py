@@ -8,7 +8,7 @@ import re
 
 from ._core_execution_state import get_private_core_state
 from .execution_state import ExecutionState
-from .configuration import assign_configuration_field
+from .configuration import assign_field
 from .command_message import Command, Message
 from .action import Action, ActionContext
 from .source_location import SourceLocation
@@ -68,19 +68,19 @@ def _interpret_command(command_text: str, is_final_message: bool, source_loc: So
         has_exclamation = bool(match.group(1))
         name = match.group(2)
         equals_sign = match.group(3)
-        RHS = match.group(4).strip() if match.group(4) else ""
-        #state.log.debug(f"{has_exclamation = }, {name = }, {equals_sign = }, {RHS = }", source_loc)
+        rhs = match.group(4).strip() if match.group(4) else ""
+        #state.log.debug(f"{has_exclamation = }, {name = }, {equals_sign = }, {rhs = }", source_loc)
 
         if not has_exclamation or (has_exclamation and is_final_message): # has_exclamation commands only run in final message
             if equals_sign:
                 # assignment:
-                if len(RHS) == 0: # missing right hand side of assignment
+                if len(rhs) == 0: # missing right hand side of assignment
                     state.log.error("skiping-empty-assignment", f"skipping configuration assignment with no right-hand-side '{command_text}'", source_loc)
                 else:
-                    assign_configuration_field(state.root_config, name, RHS, source_loc, state.log)
+                    assign_field(state.root_config, name, rhs, source_loc, state.log)
             else:
                 # action:
-                result = run_action(has_exclamation, name, RHS, source_loc, state)
+                result = run_action(has_exclamation, name, rhs, source_loc, state)
     else:
         state.log.error("unknown-command", f"couldn't interpret command '{command_text}'", source_loc)
     return result

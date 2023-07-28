@@ -155,7 +155,7 @@ class GitlogHooks(Hooks):
             # the file has no hashes, it has never been comitted. add it
             branch_name = make_branch_name(file_path)
             log.debug(f"gitlog: adding file {file_path.name} on new branch {branch_name}")
-            if not context.root_config.dry_run:
+            if not context.root_config.prapti.dry_run:
                 run_command(f"git checkout --orphan {branch_name}", shadow_worktree_dir, log)
 
                 shadow_file_name = shadow_worktree_dir/file_path.name
@@ -175,7 +175,7 @@ class GitlogHooks(Hooks):
             # the prefix is the current tip, the input is append-only, no need to branch
             log.debug("gitlog: comitting modifications to current branch")
 
-            if not context.root_config.dry_run:
+            if not context.root_config.prapti.dry_run:
                 run_command(f"git commit -a -m '{commit_message}'", main_worktree_dir, log)
             else:
                 log.debug("gitlog: dry run. no action taken")
@@ -183,7 +183,7 @@ class GitlogHooks(Hooks):
             # back-track and branch
             branch_name = make_branch_name(file_path)
             log.debug(f"backtracking to {potential_branch_point.hash} and comitting modifications on new branch {branch_name}")
-            if not context.root_config.dry_run:
+            if not context.root_config.prapti.dry_run:
                 # create a branch at potential_branch_point.hash while leaving our input file unmodified
                 # without geting errors about there being uncomitted changes
 
@@ -220,7 +220,7 @@ class GitlogHooks(Hooks):
         main_worktree_dir = context.state.input_file_path.resolve().parent
         log.debug(f"{context.state.input_file_path.name = }, {main_worktree_dir = }")
 
-        if not context.root_config.dry_run:
+        if not context.root_config.prapti.dry_run:
             run_command(f"git commit -a -m 'assistant response'", main_worktree_dir, log)
         log.debug("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True, frozen=True)
 class SourceLocation:
     """Represent the location of an entity in a source file.
     e.g. the location of a message, command, token, etc.

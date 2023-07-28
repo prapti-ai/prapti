@@ -15,11 +15,12 @@
 # ----------------------------------------------------------------------------
 # /// DANGER -- UNDER CONSTRUCTION ///////////////////////////////////////////
 
-from dataclasses import dataclass, field, asdict
 import datetime
 import typing
 import sys
+import inspect
 
+from pydantic import BaseModel, Field, ConfigDict
 import gpt4all
 
 from ..core.plugin import Plugin
@@ -60,26 +61,58 @@ def convert_message_sequence_to_text_prompt(message_sequence: list[Message], log
     result += "### Response:\n"
     return result
 
-@dataclass
-class GPT4AllResponderConfiguration:
-    model_name: str = "ggml-mpt-7b-chat.bin"
-    model_path: str = field(default_factory=str) # TODO: look up model path in registry or similar
-    n_threads: int = 0 #int|None = None # None==use default thread allocation
+class GPT4AllResponderConfiguration(BaseModel):
+    """Configuration parameters for the GPT4All chat responder.
+    See the [GPT4All API documentation](https://docs.gpt4all.io/gpt4all_api.html) for more information."""
+    model_config = ConfigDict(
+        validate_assignment=True,
+        protected_namespaces=()) # pydantic config: suppress warnings about `model` prefixed names
 
-    max_tokens: int = 500
-    temp: float = 0.7
-    top_k: int = 40
-    top_p: float = 0.1
-    repeat_penalty: float = 1.18
-    repeat_last_n: int = 64
-    n_batch: int = 8
-    n_predict: int|None = None
-    streaming: bool = True
+    # --- model instantiation parameters:
 
-_generate_arg_names = { "prompt", "max_tokens", "temp", "top_k", "top_p", "repeat_penalty", "repeat_last_n", "n_batch", "n_predict", "streaming" }
+    model_name: str = Field(default="ggml-mpt-7b-chat.bin", description=inspect.cleandoc("""\
+        Name of GPT4All or custom model. Including ".bin" file extension is optional but encouraged."""))
 
-def generate_args_from(config: GPT4AllResponderConfiguration) -> dict:
-    return {k:v for k,v in asdict(config).items() if k in _generate_arg_names}
+    model_path: str = Field(default_factory=str, description=inspect.cleandoc("""\
+        Path to directory containing model file.
+        Default is None, in which case models will be stored in `~/.cache/gpt4all/`."""))
+        # TODO: ^^^look up model path in registry or similar
+
+    n_threads: int|None = Field(default=0, description=inspect.cleandoc("""\
+        Number of CPU threads used by GPT4All. Default is None, in which case the number of threads is determined automatically."""))
+
+    # --- generate parameters:
+
+    max_tokens: int = Field(default=500, description=inspect.cleandoc("""\
+        The maximum number of tokens to generate."""))
+
+    temp: float = Field(default=0.7, description=inspect.cleandoc("""\
+        The model temperature. Larger values increase creativity but decrease factuality."""))
+
+    top_k: int = Field(default=40, description=inspect.cleandoc("""\
+        Randomly sample from the top_k most likely tokens at each generation step. Set this to 1 for greedy decoding."""))
+
+    top_p: float = Field(default=0.1, description=inspect.cleandoc("""\
+        Randomly sample at each generation step from the top most likely tokens whose probabilities add up to top_p."""))
+
+    repeat_penalty: float = Field(default=1.18, description=inspect.cleandoc("""\
+        Penalize the model for repetition. Higher values result in less repetition."""))
+
+    repeat_last_n: int = Field(default=64, description=inspect.cleandoc("""\
+        How far in the models generation history to apply the repeat penalty."""))
+
+    n_batch: int = Field(default=8, description=inspect.cleandoc("""\
+        Number of prompt tokens processed in parallel. Larger values decrease latency but increase resource requirements."""))
+
+    n_predict: int|None = Field(default=None, description=inspect.cleandoc("""\
+        Equivalent to max_tokens, exists for backwards compatibility."""))
+
+    streaming: bool = Field(default=True, description=inspect.cleandoc("""\
+        If True, this method will instead return a generator that yields tokens as the model generates them."""))
+
+    # TODO: add n parameter for number of generations.
+
+_generate_arg_names = { "max_tokens", "temp", "top_k", "top_p", "repeat_penalty", "repeat_last_n", "n_batch", "n_predict", "streaming" }
 
 class GPT4AllChatResponder(Responder):
     def __init__(self):
@@ -92,14 +125,17 @@ class GPT4AllChatResponder(Responder):
         config: GPT4AllResponderConfiguration = context.responder_config
         context.log.debug(f"gpt4all.chat: {config = }", context.state.input_file_path)
 
-        #TODO: support global model and n
-        if (value := getattr(context.root_config, "temperature", None)) is not None:
-            config.temp = value
+        # propagate late-bound global variables:
+        var_bindings = [("temp", "temperature"), ("model", "model")] # TODO: `n`
+        for config_field_name, var_name in var_bindings:
+            if (value := getattr(context.root_config.vars, var_name, None)) is not None:
+                context.log.debug(f"gpt4all.chat: binding config.{config_field_name} <- {value} from vars.{var_name}", context.state.input_file_path)
+                setattr(config, config_field_name, value)
 
-        if context.root_config.dry_run:
+        if context.root_config.prapti.dry_run:
             context.log.info("gpt4all.chat-dry-run", "gpt4all.chat: dry run: bailing before hitting the GPT4All API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
-            d = asdict(config)
+            d = config.model_dump()
             return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {d}"])]
 
         prompt = convert_message_sequence_to_text_prompt(input_, context.log)
@@ -110,7 +146,8 @@ class GPT4AllChatResponder(Responder):
                                 allow_download = False,
                                 n_threads = config.n_threads if config.n_threads > 0 else None)
 
-        generate_args = generate_args_from(config)
+        generate_args = config.model_dump(include=_generate_arg_names)
+
         context.log.debug(f"gpt4all.chat: {generate_args = }", context.state.input_file_path)
         if config.streaming:
             response = ""

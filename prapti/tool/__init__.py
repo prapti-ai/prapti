@@ -8,6 +8,7 @@ from typing import Sequence, TextIO
 from ..core.logger import create_diagnostics_logger
 from ..core._core_execution_state import CoreExecutionState
 from ..core.execution_state import ExecutionState
+from ..core.configuration import RootConfiguration, PraptiConfiguration
 from ..core.chat_markdown_parser import parse_messages
 from ..core.command_interpreter import interpret_commands
 from ..core.builtins import builtin_actions, lookup_active_responder
@@ -73,10 +74,10 @@ def default_load_config_files(state: ExecutionState):
     # in-tree `.prapticonfig.md` files:
     # (.editorconfig algorithm) starting from the directory containing the input markdown file,
     # load `.prapticonfig.md`. Iterate up the tree until a config file sets config_root = true
-    state.root_config.config_root = False
+    state.root_config.prapti.config_root = False
     for parent in state.input_file_path.resolve().parents:
         found_config_file = load_config_file(parent / ".prapticonfig.md", state)
-        if found_config_file and state.root_config.config_root:
+        if found_config_file and state.root_config.prapti.config_root:
             break # stop once we hit a config file with `%config_root = true`
 
     # if no config file is present, use fallback config
@@ -110,7 +111,7 @@ def write_messages(file: TextIO, messages: list[Message]):
     for m in messages:
         write_message(file, m)
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int:
     global argument_parser
     if not argument_parser:
         argument_parser = make_argument_parser()
@@ -122,8 +123,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     core_state = CoreExecutionState()
     state._core_state = core_state
     core_state.actions.merge(builtin_actions)
-    state.root_config.dry_run = command_line_args.dry_run
-    state.root_config.strict = command_line_args.strict
+    state.root_config.prapti.dry_run = command_line_args.dry_run
+    state.root_config.prapti.strict = command_line_args.strict
+    if test_exfil is not None:
+        state.test_exfil = test_exfil
+    state.test_exfil["state"] = state
 
     # load config files
     if not command_line_args.no_default_config:

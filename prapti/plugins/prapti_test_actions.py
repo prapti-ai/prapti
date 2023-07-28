@@ -28,7 +28,7 @@ class TestActionsPlugin(Plugin):
     def __init__(self):
         super().__init__(
             api_version = "0.1.0",
-            name = "prapti.test.actions",
+            name = "prapti.test.test_actions",
             version = "0.0.1",
             description = "Actions used to test Prapti"
         )
