@@ -117,7 +117,7 @@ class AgentsHooks(Hooks):
                 return name
         return None
 
-    def _find_least_recenth_discussion_group_participant(self, context: HooksContext) -> str|None:
+    def _find_least_recent_discussion_group_participant(self, context: HooksContext) -> str|None:
         if context.plugin_config.discussion_group:
             # find the least recently participating discussion participant and give them a turn
             # return an arbitrary element if not all participants have sent a message
@@ -134,7 +134,7 @@ class AgentsHooks(Hooks):
     def _select_agent(self, context: HooksContext) -> str|None:
         if pending_at_mentions := self._compute_pending_at_mentions(context):
             return self._pop_valid_pending_at_mention(pending_at_mentions, context)
-        return self._find_least_recenth_discussion_group_participant(context)
+        return self._find_least_recent_discussion_group_participant(context)
 
     def on_lookup_active_responder(self, responder_name: str, context: HooksContext) -> str:
         return self._select_agent(context) or responder_name
@@ -190,7 +190,7 @@ class AgentsHooks(Hooks):
 
     def on_followup(self, context: HooksContext) -> tuple[bool, list[Message]|None]:
         if context.plugin_config.discussion_group and context.plugin_config.remaining_discussion_message_count > 0:
-            if agent_name := self._find_least_recenth_discussion_group_participant(context):
+            if agent_name := self._find_least_recent_discussion_group_participant(context):
                 # trigger the agent by @-mentioning them. This will be picked up in on_before_generate_responses
                 # this hopefully ensures that all participants get a turn even if they are also @-messaging each other
                 return True, [Message(role="_prapti.experimental.agents", name=None, content=[f"@{agent_name}"])]
