@@ -22,3 +22,4 @@ class ExecutionState:
     selected_responder_context: ResponderContext|None = None
 
     _core_state: Any|None = None # 'CoreExecutionState'|None private to core
+    test_exfil: dict = field(default_factory=dict) # conduit for test inspection
