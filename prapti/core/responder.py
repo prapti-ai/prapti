@@ -8,8 +8,10 @@ import abc
 from typing import Any
 from dataclasses import dataclass
 
+from pydantic import BaseModel
+
 from .command_message import Message
-from .configuration import RootConfiguration
+from .configuration import RootConfiguration, VarRef
 from .logger import DiagnosticsLogger
 
 @dataclass
@@ -28,7 +30,7 @@ class Responder(metaclass=abc.ABCMeta):
     """Base class for responders"""
 
     @abc.abstractmethod
-    def construct_configuration(self, context: ResponderContext) -> Any|None:
+    def construct_configuration(self, context: ResponderContext) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
         pass
 
     @abc.abstractmethod

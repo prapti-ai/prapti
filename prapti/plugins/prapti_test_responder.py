@@ -1,12 +1,11 @@
 """
     Test responder plugin
 """
-import typing
-
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..core.plugin import Plugin
 from ..core.command_message import Message
+from ..core.configuration import VarRef, resolve_var_refs
 from ..core.responder import Responder, ResponderContext
 
 class TestResponderConfiguration(BaseModel):
@@ -25,21 +24,14 @@ class TestResponderConfiguration(BaseModel):
     n: int = 1
 
 class TestResponder(Responder):
-    def __init__(self):
-        super().__init__()
-
-    def construct_configuration(self, context: ResponderContext) -> typing.Any|None:
-        return TestResponderConfiguration()
+    def construct_configuration(self, context: ResponderContext) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
+        return TestResponderConfiguration(), [("model", VarRef("model")), ("temperature", VarRef("temperature")), ("n", VarRef("n"))]
 
     def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
         config: TestResponderConfiguration = context.responder_config
-        context.log.debug(f"prapti.test.test_responder: {config = }", context.state.input_file_path)
-
-        # propagate late-bound global variables:
-        for name in ("model", "temperature", "n"):
-            if (value := getattr(context.root_config.vars, name, None)) is not None:
-                context.log.debug(f"openai.chat: binding config.{name} <- {value} from vars.{name}", context.state.input_file_path)
-                setattr(config, name, value)
+        context.log.debug(f"prapti.test.test_responder: input: {config = }", context.state.input_file_path)
+        config = resolve_var_refs(config, context.root_config, context.log)
+        context.log.debug(f"prapti.test.test_responder: resolved: {config = }", context.state.input_file_path)
 
         context.state.test_exfil["test_responder_resolved_config"] = config
 

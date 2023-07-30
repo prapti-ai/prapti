@@ -3,7 +3,6 @@
 """
 import os
 import datetime
-import typing
 import inspect
 
 from pydantic import BaseModel, Field, ConfigDict
@@ -12,6 +11,7 @@ import tiktoken
 
 from ..core.plugin import Plugin
 from ..core.command_message import Message
+from ..core.configuration import VarRef, resolve_var_refs
 from ..core.responder import Responder, ResponderContext
 from ..core.logger import DiagnosticsLogger
 
@@ -195,19 +195,14 @@ class OpenAIChatResponder(Responder):
     def __init__(self):
         setup_api_key_and_organization()
 
-    def construct_configuration(self, context: ResponderContext) -> typing.Any|None:
-        return OpenAIChatResponderConfiguration()
+    def construct_configuration(self, context: ResponderContext) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
+        return OpenAIChatResponderConfiguration(), [("model", VarRef("model")), ("temperature", VarRef("temperature")), ("n", VarRef("n"))]
 
     def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
         config: OpenAIChatResponderConfiguration = context.responder_config
-        context.log.debug(f"openai.chat: {config = }", context.state.input_file_path)
-        # REVIEW: we should be treating the parameters as read-only here
-
-        # propagate late-bound global variables:
-        for name in ("model", "temperature", "n"):
-            if (value := getattr(context.root_config.vars, name, None)) is not None:
-                context.log.debug(f"openai.chat: binding config.{name} <- {value} from vars.{name}", context.state.input_file_path)
-                setattr(config, name, value)
+        context.log.debug(f"openai.chat: input: {config = }", context.state.input_file_path)
+        config = resolve_var_refs(config, context.root_config, context.log)
+        context.log.debug(f"openai.chat: resolved: {config = }", context.state.input_file_path)
 
         messages = convert_message_sequence_to_openai_messages(input_, context.log)
 
@@ -225,7 +220,7 @@ class OpenAIChatResponder(Responder):
                     context.log.info("openai.chat-at-token-limit", "openai.chat: token limit reached. exiting", context.state.input_file_path)
                     return []
 
-        context.log.debug(f"openai.chat: {config = }")
+        context.log.debug(f"openai.chat: final: {config = }")
         chat_args = config.model_dump(exclude_none=True, exclude_defaults=True)
         chat_args["model"] = config.model # include model, even if it was left at default
         context.log.debug(f"openai.chat: {chat_args = }")

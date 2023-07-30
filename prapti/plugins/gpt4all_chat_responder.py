@@ -16,7 +16,6 @@
 # /// DANGER -- UNDER CONSTRUCTION ///////////////////////////////////////////
 
 import datetime
-import typing
 import sys
 import inspect
 
@@ -25,6 +24,7 @@ import gpt4all
 
 from ..core.plugin import Plugin
 from ..core.command_message import Message
+from ..core.configuration import VarRef, resolve_var_refs
 from ..core.responder import Responder, ResponderContext
 from ..core.logger import DiagnosticsLogger
 
@@ -118,19 +118,14 @@ class GPT4AllChatResponder(Responder):
     def __init__(self):
         pass
 
-    def construct_configuration(self, context: ResponderContext) -> typing.Any|None:
-        return GPT4AllResponderConfiguration()
+    def construct_configuration(self, context: ResponderContext) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
+        return GPT4AllResponderConfiguration(), [("model", VarRef("model")), ("temp", VarRef("temperature"))]
+        # TODO: n -> var(n)
 
     def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
         config: GPT4AllResponderConfiguration = context.responder_config
+        config = resolve_var_refs(config, context.root_config, context.log)
         context.log.debug(f"gpt4all.chat: {config = }", context.state.input_file_path)
-
-        # propagate late-bound global variables:
-        var_bindings = [("temp", "temperature"), ("model", "model")] # TODO: `n`
-        for config_field_name, var_name in var_bindings:
-            if (value := getattr(context.root_config.vars, var_name, None)) is not None:
-                context.log.debug(f"gpt4all.chat: binding config.{config_field_name} <- {value} from vars.{var_name}", context.state.input_file_path)
-                setattr(config, config_field_name, value)
 
         if context.root_config.prapti.dry_run:
             context.log.info("gpt4all.chat-dry-run", "gpt4all.chat: dry run: bailing before hitting the GPT4All API", context.state.input_file_path)

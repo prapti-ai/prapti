@@ -1,19 +1,22 @@
 """
     Builtin actions.
 """
+from typing import Any, Callable
 import types
 import json
 
 import pydantic
+from pydantic import BaseModel
 
 from ._core_execution_state import get_private_core_state
 from .execution_state import ExecutionState
-from .configuration import EmptyPluginConfiguration, EmptyResponderConfiguration
+from .configuration import EmptyPluginConfiguration, EmptyResponderConfiguration, RootConfiguration, VarRef, VarEntry, NotSet, resolve_var_ref, resolve_var_ref_field_assignment, _assign_var_ref
 from .command_message import Message
 from .action import ActionNamespace, ActionContext
 from .responder import ResponderContext
 from . import hooks
 from .source_location import SourceLocation
+from .logger import DiagnosticsLogger
 
 builtin_actions: ActionNamespace = ActionNamespace()
 
@@ -50,11 +53,22 @@ plugins_dict = {plugin.name : plugin for plugin in plugins}
 # ----------------------------------------------------------------------------
 # plugin management
 
+def _setup_config(config_ret: BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None, root_config: RootConfiguration, empty_factory: Callable[[], BaseModel]) -> BaseModel:
+    if config_ret:
+        if isinstance(config_ret, tuple):
+            result, field_var_ref_assignments = config_ret
+            for field_name, var_ref in field_var_ref_assignments:
+                _assign_var_ref(result, field_name, var_ref, root_config)
+            return result
+        else:
+            return config_ret
+    return empty_factory()
+
 def load_plugin(plugin, source_loc: SourceLocation, state: ExecutionState):
     try:
         core_state = get_private_core_state(state)
 
-        plugin_config = plugin.construct_configuration() or EmptyPluginConfiguration()
+        plugin_config = _setup_config(plugin.construct_configuration(), state.root_config, empty_factory=EmptyPluginConfiguration)
         plugin_actions: ActionNamespace = plugin.construct_actions()
         plugin_hooks = plugin.construct_hooks()
 
@@ -132,9 +146,9 @@ def responder_new(name: str, raw_args: str, context: ActionContext) -> None|str|
                 plugin_config = getattr(context.root_config.plugins, plugin_name, None)
                 responder_context = ResponderContext(state=context.state,
                                                      plugin_name=plugin_name,
-                                                     root_config=context.root_config, plugin_config=plugin_config, responder_config=EmptyResponderConfiguration(),
+                                                     root_config=context.root_config, plugin_config=plugin_config, responder_config=None,
                                                      responder_name=responder_name, responder=responder, log=context.log)
-                responder_context.responder_config = responder.construct_configuration(responder_context) or responder_context.responder_config
+                responder_context.responder_config = _setup_config(responder.construct_configuration(responder_context), context.root_config, empty_factory=EmptyResponderConfiguration)
                 core_state.responder_contexts[responder_name] = responder_context
                 setattr(context.root_config.responders, responder_name, responder_context.responder_config)
             else:
@@ -166,13 +180,12 @@ def _collect_leaf_configs(config_obj, accumulated_path, result) -> None:
             field_path = field_name if not accumulated_path else f"{accumulated_path}.{field_name}"
             _collect_leaf_configs(field_value, field_path, result)
 
-def _flat_config_dump(config_obj, indent) -> str:
+def _flat_config_dump(contained_in: Any, field_name: str, config_obj, indent, root_config: RootConfiguration, log: DiagnosticsLogger) -> str:
     result = ""
     leaf_configs: list[tuple[str,pydantic.BaseModel]] = []
     _collect_leaf_configs(config_obj, "", leaf_configs)
-    print(leaf_configs)
     for path, config in leaf_configs:
-        value_dump = _config_dump(config, indent+4)
+        value_dump = _config_dump(contained_in, path, config, indent+4, root_config, log) # REVIEW not sure we have contained_in correct here
         if "\n" in value_dump:
             result += f"{' '*indent}- `{path}`\n{value_dump}"
         elif not value_dump.strip():
@@ -181,7 +194,7 @@ def _flat_config_dump(config_obj, indent) -> str:
             result += f"{' '*indent}- `{path} = {value_dump}`\n"
     return result
 
-def _config_dump(config_obj, indent) -> str:
+def _config_dump(contained_in: Any, field_name: str, config_obj, indent, root_config: RootConfiguration, log: DiagnosticsLogger) -> str:
     result = ""
     if isinstance(config_obj, pydantic.BaseModel):
         #if config_obj.__doc__:
@@ -193,9 +206,9 @@ def _config_dump(config_obj, indent) -> str:
             field_description = "" # f" -- {field_info.description}" if field_info.description else ""
 
             if field_name == "plugins":
-                value_dump = _flat_config_dump(field_value, indent+4)
+                value_dump = _flat_config_dump(config_obj, field_name, field_value, indent+4, root_config, log)
             else:
-                value_dump = _config_dump(field_value, indent+4)
+                value_dump = _config_dump(config_obj, field_name, field_value, indent+4, root_config, log)
             if "\n" in value_dump:
                 result += f"{' '*indent}- `{field_name}`{field_description}\n{value_dump}"
             elif not value_dump.strip():
@@ -206,16 +219,38 @@ def _config_dump(config_obj, indent) -> str:
         for field_name,field_value in config_obj.__dict__.items():
             if field_name.startswith("_"):
                 continue
-            value_dump = _config_dump(field_value, indent+4)
+            value_dump = _config_dump(config_obj, field_name, field_value, indent+4, root_config, log)
             if "\n" in value_dump:
                 result += f"{' '*indent}- `{field_name}`\n{value_dump}"
             elif not value_dump.strip():
-                result += f"{' '*indent}- `{field_name}` *(no parameters)*\n"
+                result += f"{' '*indent}- `{field_name}` *(empty)*\n"
             else:
                 result += f"{' '*indent}- `{field_name} = {value_dump}`\n"
+    elif isinstance(config_obj, VarEntry):
+        if config_obj.value is NotSet:
+            result += "(not set)"
+        elif isinstance(config_obj.value, VarRef):
+            var_ref_trace, var_entry = resolve_var_ref(config_obj.value, root_config, log)
+            var_ref_chain = " = ".join(f"var({vr.var_name})" for vr in var_ref_trace)
+            if var_entry.value is NotSet:
+                terminal_value_str = f"(not set) ~> {json.dumps(config_obj.value)}"
+            else:
+                terminal_value_str = json.dumps(var_entry.value)
+            result += f"{var_ref_chain} = {terminal_value_str}"
+        else:
+            result += json.dumps(config_obj.value)
     else:
-        result += json.dumps(config_obj)
-
+        var_ref_resolution : tuple[list[VarRef], VarEntry]|None = resolve_var_ref_field_assignment(target=contained_in, field_name=field_name, root_config=root_config, log=log)
+        if var_ref_resolution is None:
+            result += json.dumps(config_obj)
+        else:
+            var_ref_trace, var_entry = var_ref_resolution
+            var_ref_chain = " = ".join(f"var({vr.var_name})" for vr in var_ref_trace)
+            if var_entry.value is NotSet:
+                terminal_value_str = f"(not set) ~> {json.dumps(config_obj)}"
+            else:
+                terminal_value_str = json.dumps(var_entry.value)
+            result += f"{var_ref_chain} = {terminal_value_str}"
     return result
 
 @builtin_actions.add_action("!prapti.inspect")
@@ -223,6 +258,6 @@ def inspect_config(name: str, raw_args: str, context: ActionContext) -> None|str
     #core_state = get_private_core_state(context.state)
     root_config = context.root_config
 
-    content = "Configuration parameters:\n\n" + _config_dump(root_config, indent=0)
+    content = "Configuration parameters:\n\n" + _config_dump(None, "root", root_config, indent=0, root_config=root_config, log=context.log)
 
     return Message("_prapti", "inspect", [content], is_enabled=False)
