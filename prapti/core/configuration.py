@@ -9,7 +9,7 @@ from collections import defaultdict
 import json
 import re
 
-from pydantic import BaseModel, Field, ConfigDict, PrivateAttr
+from pydantic import BaseModel, Field, ConfigDict, PrivateAttr, ValidationError
 
 from .logger import DiagnosticsLogger
 from .source_location import SourceLocation
@@ -148,11 +148,11 @@ def resolve_var_refs(target: Model, root_config: RootConfiguration, log: Diagnos
         var_ref_trace, var_entry = resolve_var_ref(var_ref, root_config, log)
         if var_entry.value_is_set:
             try:
-                setattr(result, field_name, var_entry.value) # uses pydantic for coercion and validation, may raise execption
-            except Exception as e:
+                setattr(result, field_name, var_entry.value) # uses pydantic for coercion and validation, may raise exception
+            except ValidationError as validation_error:
                 var_ref_chain = " = ".join(f"var({vr.var_name})" for vr in var_ref_trace)
                 assignment_chain = f"{field_name} = {var_ref_chain} = {json.dumps(var_entry.value)}"
-                log.error("invalid-late-bound-field-assignment", f"could not bind variable value to field: {assignment_chain}: {repr(e)}", var_entry.value_source_loc)
+                log.error("invalid-late-bound-field-assignment", f"could not bind variable value to field: {assignment_chain}: {str(validation_error)}", var_entry.value_source_loc)
     return result
 
 def _assign_var(root_config: RootConfiguration, var_field_name: str, parsed_field_value: Any, source_loc: SourceLocation, log: DiagnosticsLogger) -> None:
@@ -191,10 +191,10 @@ def _assign_configuration_field(root_config: RootConfiguration, config_field_pat
         else:
             try:
                 log.detail("set-field", f"setting configuration field: {config_field_path} = {json.dumps(parsed_field_value)}", source_loc)
-                setattr(target, field_name, parsed_field_value) # uses pydantic for coercion and validation, may raise execption
+                setattr(target, field_name, parsed_field_value) # uses pydantic for coercion and validation, may raise exception
                 _clear_var_ref_assignment(target, field_name, root_config) # clear any var ref assignment *only after* new value has been successfully assigned
-            except Exception as e:
-                log.error("invalid-field-assignment", f"could not assign configuration value '{json.dumps(parsed_field_value)}' to field '{field_name}': {repr(e)}", source_loc)
+            except ValidationError as validation_error:
+                log.error("invalid-field-assignment", f"could not assign configuration value '{json.dumps(parsed_field_value)}' to field '{field_name}': {str(validation_error)}", source_loc)
                 return
     else:
         log.error("unknown-field", f"didn't assign configuration field. unknown configuration field '{config_field_path}'", source_loc)
