@@ -64,9 +64,6 @@ class Vars(SimpleNamespace):
         self.temperature = VarEntry() # float
         self.n = VarEntry() # int, number of responses to generate
 
-# def _var_ref_assignments_factory() -> defaultdict[int, dict[str, VarRef]]:
-#     return defaultdict(dict)
-
 class RootConfiguration(BaseModel):
     """The root of the configuration tree"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -80,6 +77,9 @@ class RootConfiguration(BaseModel):
     vars: Vars = Field(default_factory=Vars)
 
     _var_ref_assignments : defaultdict[int, dict[str, VarRef]] = PrivateAttr(default_factory=lambda: defaultdict(dict))
+    # ^^^ NOTE: defaultdict behavior is that _var_ref_assignments[x] will instantiate an innner dict if x is missing;
+    # therefore always use _var_ref_assignments.get(x) when you don't want to instantiate an inner dict
+
 
 def _assign_var_ref(target: BaseModel, field_name: str, var_ref: VarRef, root_config: RootConfiguration) -> None:
     """Store target.field_name = VarRef(...) in _var_ref_assignments side-table"""
@@ -132,7 +132,9 @@ def resolve_var_ref_field_assignment(target: BaseModel, field_name: str, root_co
 Model = TypeVar('Model', bound='BaseModel')
 
 def resolve_var_refs(target: Model, root_config: RootConfiguration, log: DiagnosticsLogger) -> Model:
-    """return an instance of the model, with all var_ref field assignments resolved to values"""
+    """Return an instance of the model with all var_ref field assignments resolved to values.
+    Note that this does not necessarily return a copy of the model but it is guaranteed to leave
+    the input `target` unmodified."""
     target_var_ref_assignments = root_config._var_ref_assignments.get(id(target))
     if not target_var_ref_assignments:
         # target has no VarRef assignments
@@ -140,7 +142,7 @@ def resolve_var_refs(target: Model, root_config: RootConfiguration, log: Diagnos
 
     result = target.model_copy()
 
-    # iterate through all var_ref -> field assignments and assign each value separately
+    # iterate through all var_ref -> field assignments and assign to each field separately
     # so that we can give precise validation errors
     # NOTE: we don't use model_copy(update=...) because it doesn't peform validation
     for field_name, var_ref in target_var_ref_assignments.items():
