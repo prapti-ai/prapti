@@ -3,7 +3,7 @@
     store configuration parameters for actions, responders, hooks, plugins, etc.
 """
 from dataclasses import dataclass, field
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Callable
 from types import SimpleNamespace
 from collections import defaultdict
 import json
@@ -79,7 +79,6 @@ class RootConfiguration(BaseModel):
     _var_ref_assignments : defaultdict[int, dict[str, VarRef]] = PrivateAttr(default_factory=lambda: defaultdict(dict))
     # ^^^ NOTE: defaultdict behavior is that _var_ref_assignments[x] will instantiate an innner dict if x is missing;
     # therefore always use _var_ref_assignments.get(x) when you don't want to instantiate an inner dict
-
 
 def _assign_var_ref(target: BaseModel, field_name: str, var_ref: VarRef, root_config: RootConfiguration) -> None:
     """Store target.field_name = VarRef(...) in _var_ref_assignments side-table"""
@@ -257,3 +256,20 @@ def assign_field(root_config: RootConfiguration, original_field_name: str, field
         _assign_var(root_config=root_config, var_field_name=resolved_field_name, parsed_field_value=parsed_field_value, source_loc=source_loc, log=log)
     else:
         _assign_configuration_field(root_config=root_config, config_field_path=resolved_field_name, parsed_field_value=parsed_field_value, source_loc=source_loc, log=log)
+
+def setup_newly_constructed_config(constructed_config: BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None, root_config: RootConfiguration, empty_factory: Callable[[], BaseModel]) -> BaseModel:
+    """Process the result of constructing a new plugin or responder configuration.
+    Assign specified var refs to fields.
+    If the constructed config is None construct an appropriate empty config."""
+    if constructed_config:
+        if isinstance(constructed_config, tuple):
+            the_config, field_var_ref_assignments = constructed_config
+            for field_name, var_ref in field_var_ref_assignments:
+                _assign_var_ref(the_config, field_name, var_ref, root_config)
+                if not hasattr(root_config.vars, var_ref.var_name):
+                    # create entries for vars, if they don't already exist
+                    setattr(root_config.vars, var_ref.var_name, VarEntry(value=NotSet, value_source_loc=SourceLocation()))
+            return the_config
+        else:
+            return constructed_config
+    return empty_factory()

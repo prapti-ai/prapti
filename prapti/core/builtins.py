@@ -1,16 +1,15 @@
 """
     Builtin actions.
 """
-from typing import Any, Callable
+from typing import Any
 import types
 import json
 
 import pydantic
-from pydantic import BaseModel
 
 from ._core_execution_state import get_private_core_state
 from .execution_state import ExecutionState
-from .configuration import EmptyPluginConfiguration, EmptyResponderConfiguration, RootConfiguration, VarRef, VarEntry, NotSet, resolve_var_ref, resolve_var_ref_field_assignment, _assign_var_ref
+from .configuration import EmptyPluginConfiguration, EmptyResponderConfiguration, RootConfiguration, VarRef, VarEntry, NotSet, resolve_var_ref, resolve_var_ref_field_assignment, setup_newly_constructed_config
 from .command_message import Message
 from .action import ActionNamespace, ActionContext
 from .responder import ResponderContext
@@ -53,22 +52,11 @@ plugins_dict = {plugin.name : plugin for plugin in plugins}
 # ----------------------------------------------------------------------------
 # plugin management
 
-def _setup_config(config_ret: BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None, root_config: RootConfiguration, empty_factory: Callable[[], BaseModel]) -> BaseModel:
-    if config_ret:
-        if isinstance(config_ret, tuple):
-            result, field_var_ref_assignments = config_ret
-            for field_name, var_ref in field_var_ref_assignments:
-                _assign_var_ref(result, field_name, var_ref, root_config)
-            return result
-        else:
-            return config_ret
-    return empty_factory()
-
 def load_plugin(plugin, source_loc: SourceLocation, state: ExecutionState):
     try:
         core_state = get_private_core_state(state)
 
-        plugin_config = _setup_config(plugin.construct_configuration(), state.root_config, empty_factory=EmptyPluginConfiguration)
+        plugin_config = setup_newly_constructed_config(plugin.construct_configuration(), state.root_config, empty_factory=EmptyPluginConfiguration)
         plugin_actions: ActionNamespace = plugin.construct_actions()
         plugin_hooks = plugin.construct_hooks()
 
@@ -148,7 +136,7 @@ def responder_new(name: str, raw_args: str, context: ActionContext) -> None|str|
                                                      plugin_name=plugin_name,
                                                      root_config=context.root_config, plugin_config=plugin_config, responder_config=None,
                                                      responder_name=responder_name, responder=responder, log=context.log)
-                responder_context.responder_config = _setup_config(responder.construct_configuration(responder_context), context.root_config, empty_factory=EmptyResponderConfiguration)
+                responder_context.responder_config = setup_newly_constructed_config(responder.construct_configuration(responder_context), context.root_config, empty_factory=EmptyResponderConfiguration)
                 core_state.responder_contexts[responder_name] = responder_context
                 setattr(context.root_config.responders, responder_name, responder_context.responder_config)
             else:
