@@ -257,7 +257,7 @@ def assign_field(root_config: RootConfiguration, original_field_name: str, field
     else:
         _assign_configuration_field(root_config=root_config, config_field_path=resolved_field_name, parsed_field_value=parsed_field_value, source_loc=source_loc, log=log)
 
-def setup_newly_constructed_config(constructed_config: BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None, root_config: RootConfiguration, empty_factory: Callable[[], BaseModel]) -> BaseModel:
+def setup_newly_constructed_config(constructed_config: BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None, empty_factory: Callable[[], BaseModel], root_config: RootConfiguration,) -> BaseModel:
     """Process the result of constructing a new plugin or responder configuration.
     Assign specified var refs to fields.
     If the constructed config is None construct an appropriate empty config."""

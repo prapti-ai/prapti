@@ -56,7 +56,7 @@ def load_plugin(plugin, source_loc: SourceLocation, state: ExecutionState):
     try:
         core_state = get_private_core_state(state)
 
-        plugin_config = setup_newly_constructed_config(plugin.construct_configuration(), state.root_config, empty_factory=EmptyPluginConfiguration)
+        plugin_config = setup_newly_constructed_config(plugin.construct_configuration(), empty_factory=EmptyPluginConfiguration, root_config=state.root_config)
         plugin_actions: ActionNamespace = plugin.construct_actions()
         plugin_hooks = plugin.construct_hooks()
 
@@ -136,7 +136,7 @@ def responder_new(name: str, raw_args: str, context: ActionContext) -> None|str|
                                                      plugin_name=plugin_name,
                                                      root_config=context.root_config, plugin_config=plugin_config, responder_config=None,
                                                      responder_name=responder_name, responder=responder, log=context.log)
-                responder_context.responder_config = setup_newly_constructed_config(responder.construct_configuration(responder_context), context.root_config, empty_factory=EmptyResponderConfiguration)
+                responder_context.responder_config = setup_newly_constructed_config(responder.construct_configuration(responder_context), empty_factory=EmptyResponderConfiguration, root_config=context.root_config)
                 core_state.responder_contexts[responder_name] = responder_context
                 setattr(context.root_config.responders, responder_name, responder_context.responder_config)
             else:
