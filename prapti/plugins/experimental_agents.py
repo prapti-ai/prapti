@@ -27,7 +27,6 @@
 # /// DANGER -- UNDER CONSTRUCTION ///////////////////////////////////////////
 
 import re
-import typing
 
 from pydantic import BaseModel, Field
 
@@ -35,6 +34,7 @@ from ..core.plugin import Plugin
 from ..core.action import ActionNamespace, ActionContext
 from ..core.hooks import Hooks, HooksContext
 from ..core.command_message import Message
+from ..core.configuration import VarRef
 
 at_mention_regex = re.compile(r"@(\w+)")
 
@@ -80,7 +80,6 @@ class AgentsHooks(Hooks):
     def __init__(self):
         self._disabled_messages: list[Message] = []
         self._assistant_messages_switched_to_user: list[Message] = []
-        pass
 
     def on_plugin_loaded(self, context: HooksContext):
         pass
@@ -211,7 +210,7 @@ class AgentsPlugin(Plugin):
     def construct_actions(self) -> ActionNamespace|None:
         return _actions
 
-    def construct_configuration(self) -> typing.Any|None:
+    def construct_configuration(self) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
         return AgentsPluginConfiguration()
 
     def construct_hooks(self) -> Hooks|None:

@@ -1,11 +1,12 @@
 """
     Plugins are dynamically loaded extensions.
 """
-from typing import Any
+from pydantic import BaseModel
 
 from ..core.action import ActionNamespace
 from ..core.hooks import Hooks
 from ..core.responder import Responder
+from ..core.configuration import VarRef
 
 class Plugin:
     """Base class for plugins"""
@@ -15,7 +16,7 @@ class Plugin:
         self.version: str = version
         self.description: str = description
 
-    def construct_configuration(self) -> Any|None:
+    def construct_configuration(self) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
         return None
 
     def construct_actions(self) -> ActionNamespace|None:

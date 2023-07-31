@@ -1,9 +1,9 @@
 """
     test plugin with non-empty config
 """
-import typing
 from pydantic import BaseModel, Field, ConfigDict
 from ..core.plugin import Plugin
+from ..core.configuration import VarRef
 
 class TestConfigConfiguration(BaseModel):
     """Configuration parameters for the prapti.test.test_config plugin"""
@@ -25,7 +25,7 @@ class TestConfigPlugin(Plugin):
             description = "Plugin used to test Prapti"
         )
 
-    def construct_configuration(self) -> typing.Any|None:
+    def construct_configuration(self) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
         return TestConfigConfiguration()
 
 prapti_plugin = TestConfigPlugin()
