@@ -69,15 +69,16 @@ def default_load_config_files(state: ExecutionState):
     found_config_file = False
 
     # user config file i.e. ~/.prapti/config.md
-    found_config_file = load_config_file(pathlib.Path.home() / '.prapti' / 'config.md', state)
+    found_config_file |= load_config_file(pathlib.Path.home() / '.prapti' / 'config.md', state)
 
     # in-tree `.prapticonfig.md` files:
     # (.editorconfig algorithm) starting from the directory containing the input markdown file,
     # load `.prapticonfig.md`. Iterate up the tree until a config file sets config_root = true
     state.root_config.prapti.config_root = False
     for parent in state.input_file_path.resolve().parents:
-        found_config_file = load_config_file(parent / ".prapticonfig.md", state)
-        if found_config_file and state.root_config.prapti.config_root:
+        found = load_config_file(parent / ".prapticonfig.md", state)
+        found_config_file |= found
+        if found and state.root_config.prapti.config_root:
             break # stop once we hit a config file with `%config_root = true`
 
     # if no config file is present, use fallback config
