@@ -20,12 +20,12 @@ from ..core.configuration import VarRef, resolve_var_refs
 from ..core.responder import Responder, ResponderContext
 from ..core.logger import DiagnosticsLogger
 
-kobold_api_base = "http://localhost:5001/api/v1"
-
 class KoboldcppResponderConfiguration(BaseModel):
     """Configuration parameters for koboldcpp responder."""
     model_config = ConfigDict(
         validate_assignment=True)
+
+    api_base: str = "http://localhost:5001/api/v1"
 
     max_context_length: int|None = None
     max_length: int = 50
@@ -89,7 +89,7 @@ class KoboldcppResponder(Responder):
         generate_args = config.model_dump(exclude_none=True, exclude_defaults=True)
         context.log.debug(f"kobold.text: {generate_args = }")
 
-        r = requests.post(f"{kobold_api_base}/generate", json={"prompt": prompt, **generate_args}, timeout=1000)
+        r = requests.post(f"{config.api_base}/generate", json={"prompt": prompt, **generate_args}, timeout=1000)
         response_json = r.json()
         response_text = response_json["results"][0]["text"]
 
