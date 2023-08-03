@@ -18,10 +18,6 @@ The Python code that implements support for GPT4All in Prapti can be found at:
 prapti/plugins/gpt4all_chat_responder.py
 ```
 
-## Others
-
-We plan to add support for other local LLM libraries. Watch this space, or contribute your own.
-
 ## Koboldcpp
 
 Prapti supports Koboldcpp, a CPU-based LLM inference engine based on llama.cpp.
@@ -47,3 +43,7 @@ The Python code that implements support for Koboldcpp in Prapti can be found at:
 ```
 prapti/plugins/koboldcpp_text_responder.py
 ```
+
+## Others
+
+We plan to add support for other local LLM libraries. Watch this space, or contribute your own.
