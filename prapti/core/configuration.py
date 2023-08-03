@@ -297,7 +297,7 @@ def resolve_var_refs(target: Model, root_config: RootConfiguration, log: Diagnos
 
 # ----------------------------------------------------------------------------
 
-def setup_newly_constructed_config(constructed_config: BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None, empty_factory: Callable[[], BaseModel], root_config: RootConfiguration,) -> BaseModel:
+def setup_newly_constructed_config(constructed_config: BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None, empty_factory: Callable[[], BaseModel], root_config: RootConfiguration, log: DiagnosticsLogger) -> BaseModel:
     """Process the result of constructing a new plugin or responder configuration.
     Assign specified var refs to fields.
     If the constructed config is None construct an appropriate empty config."""
@@ -305,6 +305,8 @@ def setup_newly_constructed_config(constructed_config: BaseModel|tuple[BaseModel
         if isinstance(constructed_config, tuple):
             the_config, field_var_ref_assignments = constructed_config
             for field_name, var_ref in field_var_ref_assignments:
+                if not field_name in the_config.model_fields:
+                    log.warning("setup-assign-var-ref-to-nonexistant-field", f"setup: can't set field `{field_name}` to `var({var_ref.var_name})`. field doesn't exist.")
                 _assign_var_ref(the_config, field_name, var_ref, root_config)
                 if not hasattr(root_config.vars, var_ref.var_name):
                     # create entries for vars, if they don't already exist
