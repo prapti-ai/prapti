@@ -43,6 +43,7 @@ plugins = [
     prapti.plugins.include.prapti_plugin,
     prapti.plugins.experimental_agents.prapti_plugin,
     prapti.plugins.prapti_test_config.prapti_plugin,
+    prapti.plugins.prapti_test_responder.prapti_plugin,
     prapti.plugins.koboldcpp_text_responder.prapti_plugin,
     prapti.plugins.prapti_test_actions.prapti_plugin,
 ]
