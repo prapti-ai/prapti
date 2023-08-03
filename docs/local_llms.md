@@ -25,10 +25,11 @@ Prapti supports Koboldcpp, a CPU-based LLM inference engine based on llama.cpp.
 Start by getting Koboldcpp working using its own "lite" UI. After that,
 Prapti will also be able to query the running Koboldcpp API server.
 
-Koboldcpp provides raw text completions, not structured chat-format completions,
-so you will need to use the `### @prompt:` message heading with Prapti. Be warned
-that this requires a more nuanced understanding of prompting LLMs than simply
-conversing with a "chat" fine-tuned model.
+Koboldcpp provides raw text completions, not structured chat-format completions.
+Be warned that this requires a more nuanced understanding of prompting LLMs than simply
+conversing with a "chat" fine-tuned model. Instead of `### @user:` you will need to
+use `### @prompt:` to begin your prompt. Prapti will append the LLM's completion directly
+after the end of the prompt.
 
 Use the Prapti configuration in the following markdown file as a starting point.
 
