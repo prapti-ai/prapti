@@ -22,14 +22,16 @@ prapti/plugins/gpt4all_chat_responder.py
 
 Prapti supports Koboldcpp, a CPU-based LLM inference engine based on llama.cpp.
 
-Start by getting Koboldcpp working using its own "lite" UI. After that,
-Prapti will also be able to query the running Koboldcpp API server.
+The first step is to ensure Koboldcpp is operational using its "lite" UI. Do this by
+following the Koboldcpp documentation. Once this is achieved, Prapti can then
+query the running Koboldcpp API server.
 
-Koboldcpp provides raw text completions, not structured chat-format completions.
-Be warned that this requires a more nuanced understanding of prompting LLMs than simply
-conversing with a "chat" fine-tuned model. Instead of `### @user:` you will need to
-use `### @prompt:` to begin your prompt. Prapti will append the LLM's completion directly
-after the end of the prompt.
+Koboldcpp is designed to provide raw text completions, not structured chat-format
+completions. As a result, prompts should be written to elicit a natural text
+continuation from the LLM. Instead of initiating your prompt with `### @user:`,
+use `### @prompt:`. Prapti will then append the LLM's completion directly after
+the prompt. Please note that this workflow necessitates a more nuanced understanding
+of prompting LLMs than simply engaging with a "chat" fine-tuned model.
 
 Use the Prapti configuration in the following markdown file as a starting point.
 
@@ -47,4 +49,4 @@ prapti/plugins/koboldcpp_text_responder.py
 
 ## Others
 
-We plan to add support for other local LLM libraries. Watch this space, or contribute your own.
+We plan to add support for other local LLM engines. Watch this space, or contribute your own.
