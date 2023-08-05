@@ -20,7 +20,7 @@ from ...core.logger import DiagnosticsLogger
 # basic example:
 # https://gist.github.com/pszemraj/c643cfe422d3769fd13b97729cf517c5
 
-# command line arguments, api key --------------------------------------------
+# api key --------------------------------------------------------------------
 
 # NOTE: we do not want to allow the user to store secrets in files that could easily be leaked.
 # therefore we do not support specifying the API key in the configuration space
