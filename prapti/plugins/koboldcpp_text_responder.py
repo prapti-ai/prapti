@@ -57,6 +57,8 @@ def convert_message_sequence_to_text_prompt(message_sequence: list[Message], log
         if message.role == "prompt":
             assert len(message.content) == 1 and isinstance(message.content[0], str), "koboldcpp.text: expected flattened message content"
             result += message.content[0]
+        elif message.role in ("user", "assistant"):
+            log.warning("unsupported-chat-role", f"message will not be included in LLM prompt. role '{message.role}' is not supported. use '### @prompt:'.", message.source_loc)
         else:
             log.warning("unrecognised-public-role", f"message will not be included in LLM prompt. public role '{message.role}' is not recognised.", message.source_loc)
             continue
