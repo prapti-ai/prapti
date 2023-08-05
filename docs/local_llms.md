@@ -7,15 +7,15 @@ Prapti has experimental support for GPT4All, a CPU-based LLM inference engine.
 You can use the Prapti configuration in the following markdown file as a starting point.
 
 ```
-prapti/plugins/gpt4all_test_1.md
+prapti/plugins/endpoints/gpt4all_test_1.md
 ```
 
-[Or just click here](../prapti/plugins/gpt4all_test_1.md)
+[Or just click here](../prapti/plugins/endpoints/gpt4all_test_1.md)
 
 The Python code that implements support for GPT4All in Prapti can be found at:
 
 ```
-prapti/plugins/gpt4all_chat_responder.py
+prapti/plugins/endpoints/gpt4all_chat_responder.py
 ```
 
 ## Koboldcpp
@@ -36,15 +36,15 @@ of prompting LLMs than simply engaging with a "chat" fine-tuned model.
 Use the Prapti configuration in the following markdown file as a starting point.
 
 ```
-prapti/plugins/koboldcpp_text_responder.md
+prapti/plugins/endpoints/koboldcpp_text_responder.md
 ```
 
-[Or just click here](../prapti/plugins/koboldcpp_text_responder.md)
+[Or just click here](../prapti/plugins/endpoints/koboldcpp_text_responder.md)
 
 The Python code that implements support for Koboldcpp in Prapti can be found at:
 
 ```
-prapti/plugins/koboldcpp_text_responder.py
+prapti/plugins/endpoints/koboldcpp_text_responder.py
 ```
 
 ## Others

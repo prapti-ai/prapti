@@ -22,11 +22,11 @@ import inspect
 from pydantic import BaseModel, Field, ConfigDict
 import gpt4all
 
-from ..core.plugin import Plugin
-from ..core.command_message import Message
-from ..core.configuration import VarRef, resolve_var_refs
-from ..core.responder import Responder, ResponderContext
-from ..core.logger import DiagnosticsLogger
+from ...core.plugin import Plugin
+from ...core.command_message import Message
+from ...core.configuration import VarRef, resolve_var_refs
+from ...core.responder import Responder, ResponderContext
+from ...core.logger import DiagnosticsLogger
 
 def convert_message_sequence_to_text_prompt(message_sequence: list[Message], log: DiagnosticsLogger) -> str:
     # a hack, based on: https://github.com/nomic-ai/gpt4all/pull/652
