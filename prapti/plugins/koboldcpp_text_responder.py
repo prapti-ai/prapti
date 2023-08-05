@@ -49,9 +49,6 @@ class KoboldcppResponderConfiguration(BaseModel):
     # stream via generate/stream route
 
 def convert_message_sequence_to_text_prompt(message_sequence: list[Message], log: DiagnosticsLogger) -> str:
-    # a hack, based on: https://github.com/nomic-ai/gpt4all/pull/652
-    # note we are currently ignoring message.name
-
     result = ""
     for message in message_sequence:
         if not message.is_enabled or message.is_private:
