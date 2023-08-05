@@ -18,10 +18,9 @@ class CoreExecutionState: # private to core
 
 def get_private_core_state(state: ExecutionState) -> CoreExecutionState:
     """
-        `state._core_state` is the back-door into the private details of core.
-        this function is the access point to very low-level details
-        that should only be manipulated by the core part of the package.
+        Access point to very low-level private details that should only be manipulated
+        by the core part of the package.
     """
-    if not isinstance(state._core_state, CoreExecutionState):
+    if not isinstance(state.private_core_state, CoreExecutionState):
         raise TypeError("expected a private CoreExecutionState")
-    return state._core_state # intentional access of protected member
+    return state.private_core_state
