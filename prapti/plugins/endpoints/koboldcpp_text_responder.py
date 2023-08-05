@@ -9,9 +9,9 @@
                 https://github.com/LostRuins/koboldcpp/blob/concedo/koboldcpp.py
 """
 import datetime
-import requests
 from typing import Literal
 
+import requests
 from pydantic import BaseModel, ConfigDict, Field
 
 from ...core.plugin import Plugin
@@ -71,26 +71,26 @@ class KoboldcppResponder(Responder):
 
     def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
         config: KoboldcppResponderConfiguration = context.responder_config
-        context.log.debug(f"experimental.koboldcpp.responder: input: {config = }", context.state.input_file_path)
+        context.log.debug(f"koboldcpp.text: input: {config = }", context.state.input_file_path)
         config = resolve_var_refs(config, context.root_config, context.log)
-        context.log.debug(f"experimental.koboldcpp.responder: resolved: {config = }", context.state.input_file_path)
+        context.log.debug(f"koboldcpp.text: resolved: {config = }", context.state.input_file_path)
 
         prompt = convert_message_sequence_to_text_prompt(input_, context.log)
         if not prompt:
-            context.log.error("kobold-text: can't generate completion. prompt is empty.")
+            context.log.error("koboldcpp.text: can't generate completion. prompt is empty.")
             return []
 
         if context.root_config.prapti.dry_run:
-            context.log.info("koboldcpp.text-dry-run", "koboldcpp.text: dry run: bailing before hitting the Kobold API", context.state.input_file_path)
+            context.log.info("koboldcpp-text-dry-run", "koboldcpp.text: dry run: bailing before hitting the Kobold API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
             d = config.model_dump()
             return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {d}"])]
 
         generate_args = config.model_dump(exclude_none=True, exclude_defaults=True)
-        context.log.debug(f"kobold.text: {generate_args = }")
+        context.log.debug(f"koboldcpp.text: {generate_args = }")
 
-        r = requests.post(f"{config.api_base}/generate", json={"prompt": prompt, **generate_args}, timeout=1000)
-        response_json = r.json()
+        response = requests.post(f"{config.api_base}/generate", json={"prompt": prompt, **generate_args}, timeout=1000)
+        response_json = response.json()
         response_text = response_json["results"][0]["text"]
 
         return [Message(role="completion", name=None, content=[response_text])]
@@ -99,9 +99,9 @@ class KoboldcppResponderPlugin(Plugin):
     def __init__(self):
         super().__init__(
             api_version = "0.1.0",
-            name = "experimental.koboldcpp.text",
+            name = "koboldcpp.text",
             version = "0.0.1",
-            description = "Responder using the Koboldcpp text completions API."
+            description = "Responder using the Koboldcpp text completions API"
         )
 
     def construct_responder(self) -> Responder|None:
