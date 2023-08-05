@@ -43,7 +43,7 @@ class TestResponderPlugin(Plugin):
             api_version = "0.1.0",
             name = "prapti.test.test_responder",
             version = "0.0.1",
-            description = "Test responder"
+            description = "Responder used to test Prapti"
         )
 
     def construct_responder(self) -> Responder|None:
