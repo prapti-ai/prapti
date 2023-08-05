@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prapti"
-version = "0.0.1"
+dynamic = ["version"]
 description = "Converse with LLMs directly in markdown files"
 requires-python = ">=3.10"
 license = {text = "MIT License"}
@@ -29,6 +29,9 @@ dependencies = [
     "tiktoken >= 0.4.0",
     "gpt4all >= 1.0.2"
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "prapti.__version__.__version__"}
 
 [project.optional-dependencies]
 test = [
