@@ -3,14 +3,12 @@
 """
 import argparse
 import pathlib
-from enum import Enum
 from typing import Sequence, TextIO
 from dataclasses import dataclass
 
 from ..core.logger import create_diagnostics_logger
 from ..core._core_execution_state import CoreExecutionState
 from ..core.execution_state import ExecutionState
-from ..core.configuration import RootConfiguration, PraptiConfiguration
 from ..core.chat_markdown_parser import parse_messages
 from ..core.command_interpreter import interpret_commands
 from ..core.builtins import builtin_actions, lookup_active_responder
