@@ -1,5 +1,5 @@
-% plugins.load experimental.koboldcpp.text
-% responder.new default experimental.koboldcpp.text
+% plugins.load koboldcpp.text
+% responder.new default koboldcpp.text
 
 % temperature = 0.5
 % responders.default.top_p = 0.9
