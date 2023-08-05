@@ -42,7 +42,7 @@ def add_logging_level(level: int, name: str, lower_bound: int, upper_bound: int)
         logging.addLevelName(level, name)
         return level
     if existing_level > upper_bound or existing_level < lower_bound:
-        print(f"prapti: warning: log level {name} was not configured in expected range", file=sys.stderr)
+        print(f"warning: prapti: log level {name} was not configured in expected range", file=sys.stderr)
     return existing_level
 
 HINT: int = add_logging_level(25, "HINT", logging.INFO, logging.WARNING) # midway between INFO and WARNING
