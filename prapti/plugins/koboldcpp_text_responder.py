@@ -63,8 +63,6 @@ def convert_message_sequence_to_text_prompt(message_sequence: list[Message], log
             log.warning("unrecognised-public-role", f"message will not be included in LLM prompt. public role '{message.role}' is not recognised.", message.source_loc)
             continue
 
-    # REVIEW: should we fail with an error if the prompt is empty? probably
-
     return result
 
 class KoboldcppResponder(Responder):
@@ -78,6 +76,9 @@ class KoboldcppResponder(Responder):
         context.log.debug(f"experimental.koboldcpp.responder: resolved: {config = }", context.state.input_file_path)
 
         prompt = convert_message_sequence_to_text_prompt(input_, context.log)
+        if not prompt:
+            context.log.error("kobold-text: can't generate completion. prompt is empty.")
+            return []
 
         if context.root_config.prapti.dry_run:
             context.log.info("koboldcpp.text-dry-run", "koboldcpp.text: dry run: bailing before hitting the Kobold API", context.state.input_file_path)
