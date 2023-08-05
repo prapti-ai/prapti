@@ -21,5 +21,5 @@ class ExecutionState:
 
     selected_responder_context: ResponderContext|None = None
 
-    _core_state: Any|None = None # 'CoreExecutionState'|None private to core
+    private_core_state: Any|None = None # private to core. use get_private_core_state() for typesafe access
     test_exfil: dict = field(default_factory=dict) # conduit for test inspection
