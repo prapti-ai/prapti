@@ -6,6 +6,7 @@ import pathlib
 from typing import Sequence, TextIO
 from dataclasses import dataclass
 
+from ..__init__ import __version__
 from ..core.logger import create_diagnostics_logger
 from ..core._core_execution_state import CoreExecutionState
 from ..core.execution_state import ExecutionState
@@ -23,9 +24,10 @@ fallback_config_file_data = """\
 
 argument_parser = None
 
-def make_argument_parser():
+def make_argument_parser() -> argparse.ArgumentParser:
     # create and initialize an ArgumentParser
-    result = argparse.ArgumentParser(description="Prapti markdown chat")
+    result = argparse.ArgumentParser(prog="prapti", description="Prapti markdown chat")
+    result.add_argument('--version', action='version', version=f"%(prog)s {__version__}")
     result.add_argument("--dry-run", help="prepare the API request then bail", action="store_true")
     result.add_argument("--strict", help="fail if errors are encountered, do not attempt error recovery", action="store_true")
     result.add_argument("--no-default-config", help="disable default config file search", action="store_true")
