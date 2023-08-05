@@ -11,8 +11,8 @@ from .source_location import SourceLocation
 # a level-3 ATX heading https://spec.commonmark.org/0.30/#atx-headings
 message_delimiter_regex = re.compile(r"^[ ]{0,3}###\s+(\/\/)?\s*@([\w]+)(?:\/([\w]+))?:?\s*\n")
 
-# match single-line "commands" which are lines starting with % (optionally prefixed with >)
-# TODO: don't match commands inside <!-- --> comments or inside fenced blocks
+# match single-line configuration commands/assignment: lines starting with %, optionally prefixed with blockquote '>'
+# TODO: don't match config inside <!-- --> comments or inside fenced blocks
 command_line_regex = re.compile(r"^(?:[ ]{0,3}\>\s*)?(\/\/)?\s*%\s*(.*)\n")
 
 def parse_messages(lines: list[str], file_path: pathlib.Path|None) -> list[Message]:
