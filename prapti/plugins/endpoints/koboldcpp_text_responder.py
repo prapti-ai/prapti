@@ -14,11 +14,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..core.plugin import Plugin
-from ..core.command_message import Message
-from ..core.configuration import VarRef, resolve_var_refs
-from ..core.responder import Responder, ResponderContext
-from ..core.logger import DiagnosticsLogger
+from ...core.plugin import Plugin
+from ...core.command_message import Message
+from ...core.configuration import VarRef, resolve_var_refs
+from ...core.responder import Responder, ResponderContext
+from ...core.logger import DiagnosticsLogger
 
 class KoboldcppResponderConfiguration(BaseModel):
     """Configuration parameters for koboldcpp responder."""

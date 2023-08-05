@@ -27,24 +27,24 @@ builtin_actions: ActionNamespace = ActionNamespace()
 # HACK: right now we manually import all of the plugins and add their entry points
 # to the plugins array. in future we will want to avoid importing the module
 # until loading the plugin, probably via setuptools entry points.
-import prapti.plugins.openai_chat_responder
-import prapti.plugins.gpt4all_chat_responder
+import prapti.plugins.endpoints.openai_chat_responder
+import prapti.plugins.endpoints.gpt4all_chat_responder
+import prapti.plugins.endpoints.koboldcpp_text_responder
 import prapti.plugins.experimental_gitlog
 import prapti.plugins.include
 import prapti.plugins.experimental_agents
 import prapti.plugins.prapti_test_config
 import prapti.plugins.prapti_test_responder
 import prapti.plugins.prapti_test_actions
-import prapti.plugins.koboldcpp_text_responder
 plugins = [
-    prapti.plugins.openai_chat_responder.prapti_plugin,
-    prapti.plugins.gpt4all_chat_responder.prapti_plugin,
+    prapti.plugins.endpoints.openai_chat_responder.prapti_plugin,
+    prapti.plugins.endpoints.gpt4all_chat_responder.prapti_plugin,
+    prapti.plugins.endpoints.koboldcpp_text_responder.prapti_plugin,
     prapti.plugins.experimental_gitlog.prapti_plugin,
     prapti.plugins.include.prapti_plugin,
     prapti.plugins.experimental_agents.prapti_plugin,
     prapti.plugins.prapti_test_config.prapti_plugin,
     prapti.plugins.prapti_test_responder.prapti_plugin,
-    prapti.plugins.koboldcpp_text_responder.prapti_plugin,
     prapti.plugins.prapti_test_actions.prapti_plugin,
 ]
 plugins_dict = {plugin.name : plugin for plugin in plugins}
