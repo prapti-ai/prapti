@@ -11,7 +11,7 @@ Prapti is a tool for prompting Large Language Models (LLMs) with an editable his
 - Easily edit the whole conversation history/context window, including previous LLM outputs
 - Inline configuration syntax: easily change LLM parameters and switch language models ("responders") with each round of the conversation
 - Designed to be extensible with plugins (responders, commands and processing hooks)
-- Supports OpenAI, GPT4All (experimental), or add your favourite LLM back-end by implementing a Responder plugin
+- Supports OpenAI, Koboldcpp, GPT4All (experimental), or add your favourite LLM back-end by implementing a Responder plugin
 
 Using prapti is an interactive experience, but you can get an idea of what it might be like by reading [your first prapti conversation](start_here.md).
 

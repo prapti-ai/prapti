@@ -35,6 +35,7 @@ import prapti.plugins.experimental_agents
 import prapti.plugins.prapti_test_config
 import prapti.plugins.prapti_test_responder
 import prapti.plugins.prapti_test_actions
+import prapti.plugins.koboldcpp_text_responder
 plugins = [
     prapti.plugins.openai_chat_responder.prapti_plugin,
     prapti.plugins.gpt4all_chat_responder.prapti_plugin,
@@ -43,6 +44,7 @@ plugins = [
     prapti.plugins.experimental_agents.prapti_plugin,
     prapti.plugins.prapti_test_config.prapti_plugin,
     prapti.plugins.prapti_test_responder.prapti_plugin,
+    prapti.plugins.koboldcpp_text_responder.prapti_plugin,
     prapti.plugins.prapti_test_actions.prapti_plugin,
 ]
 plugins_dict = {plugin.name : plugin for plugin in plugins}
