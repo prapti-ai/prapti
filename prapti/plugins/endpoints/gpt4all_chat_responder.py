@@ -18,6 +18,7 @@
 import datetime
 import sys
 import inspect
+import json
 
 from pydantic import BaseModel, Field, ConfigDict
 import gpt4all
@@ -130,8 +131,7 @@ class GPT4AllChatResponder(Responder):
         if context.root_config.prapti.dry_run:
             context.log.info("gpt4all.chat-dry-run", "gpt4all.chat: dry run: bailing before hitting the GPT4All API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
-            d = config.model_dump()
-            return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {d}"])]
+            return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {json.dumps(config.model_dump())}"])]
 
         prompt = convert_message_sequence_to_text_prompt(input_, context.log)
 

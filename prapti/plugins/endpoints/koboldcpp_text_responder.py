@@ -10,6 +10,7 @@
 """
 import datetime
 from typing import Literal
+import json
 
 import requests
 from pydantic import BaseModel, ConfigDict, Field
@@ -83,8 +84,7 @@ class KoboldcppResponder(Responder):
         if context.root_config.prapti.dry_run:
             context.log.info("koboldcpp-text-dry-run", "koboldcpp.text: dry run: bailing before hitting the Kobold API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
-            d = config.model_dump()
-            return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {d}"])]
+            return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {json.dumps(config.model_dump())}"])]
 
         generate_args = config.model_dump(exclude_none=True, exclude_defaults=True)
         context.log.debug(f"koboldcpp.text: {generate_args = }")
