@@ -1,7 +1,25 @@
+import importlib.metadata
 import pydantic
 from prapti.core.execution_state import ExecutionState
+from prapti.core.plugin import Plugin
+from prapti.core.builtins import installed_plugin_entry_points
 from prapti.plugins.prapti_test_config import TestConfigConfiguration
 from prapti.plugins.prapti_test_responder import TestResponderConfiguration
+
+def test_test_plugins_available():
+    """Test that the test plugins are available"""
+    assert "prapti.test.test_config" in installed_plugin_entry_points
+    assert "prapti.test.test_responder" in installed_plugin_entry_points
+    assert "prapti.test.test_actions" in installed_plugin_entry_points
+
+def test_entry_point_names_are_consistent_with_plugin_names():
+    """A plugin's entry point name is set in `pyproject.toml`, whereas the plugin name is set
+    in the prapti_plugin instance in the module containing the plugin.
+    The two names must match. Prapti's plugin loading code depends on it."""
+    entry_point: importlib.metadata.EntryPoint
+    for _, entry_point in installed_plugin_entry_points.items():
+        plugin: Plugin = entry_point.load()
+        assert entry_point.name == plugin.name
 
 LOAD_PlUGIN_PROMPT = """\
 % plugins.load prapti.test.test_config

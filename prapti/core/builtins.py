@@ -4,6 +4,7 @@
 from typing import Any
 import types
 import json
+import importlib.metadata
 
 import pydantic
 
@@ -16,50 +17,58 @@ from .responder import ResponderContext
 from . import hooks
 from .source_location import SourceLocation
 from .logger import DiagnosticsLogger
+from .plugin import Plugin
 
 builtin_actions: ActionNamespace = ActionNamespace()
 
-# ----------------------------------------------------------------------------
-# /// DANGER -- UNDER CONSTRUCTION ///////////////////////////////////////////
+# plugin management ----------------------------------------------------------
 
-# plugin registry (hard coded)
+# Plugin loading proceeds in the following steps:
+#   1. at startup, eagerly create a dict of all available prapti.plugin `EntryPoint`s,
+#      without loading anything. Plugin discovery is implemented using the standard
+#      Python entry point mechanism via `importlib.metadata`.
+#   2. on demand, load the entry point itself, which is an instance of prapti Plugin.
+#      This step uses `importlib.metadata` to load the module that implements the plugin.
+#   3. on demand, use the Plugin instance to instantiate the plugin's capabilities
+#       and then load these capabilities into an execution state.
+#
+# The above steps are performed separately to minimise the amount of unnecessary work
+# performed, and to allow multiple execution states to coexist, each with its own set
+# of loaded plugins.
 
-# HACK: right now we manually import all of the plugins and add their entry points
-# to the plugins array. in future we will want to avoid importing the module
-# until loading the plugin, probably via setuptools entry points.
-import prapti.plugins.endpoints.openai_chat_responder
-import prapti.plugins.endpoints.gpt4all_chat_responder
-import prapti.plugins.endpoints.koboldcpp_text_responder
-import prapti.plugins.experimental_gitlog
-import prapti.plugins.include
-import prapti.plugins.experimental_agents
-import prapti.plugins.prapti_test_config
-import prapti.plugins.prapti_test_responder
-import prapti.plugins.prapti_test_actions
-plugins = [
-    prapti.plugins.endpoints.openai_chat_responder.prapti_plugin,
-    prapti.plugins.endpoints.gpt4all_chat_responder.prapti_plugin,
-    prapti.plugins.endpoints.koboldcpp_text_responder.prapti_plugin,
-    prapti.plugins.experimental_gitlog.prapti_plugin,
-    prapti.plugins.include.prapti_plugin,
-    prapti.plugins.experimental_agents.prapti_plugin,
-    prapti.plugins.prapti_test_config.prapti_plugin,
-    prapti.plugins.prapti_test_responder.prapti_plugin,
-    prapti.plugins.prapti_test_actions.prapti_plugin,
-]
-plugins_dict = {plugin.name : plugin for plugin in plugins}
+installed_plugin_entry_points: dict[str, importlib.metadata.EntryPoint] = {
+    entry_point.name: entry_point
+    for entry_point in importlib.metadata.entry_points(group="prapti.plugin")
+}
 
-# ^^^ END UNDER CONSTRUCTION /////////////////////////////////////////////////
+if not installed_plugin_entry_points:
+    print("warning: prapti: no plugins found. install with pip to register plugins.")
 
-# ----------------------------------------------------------------------------
-# plugin management
+loaded_plugin_entry_points: dict[str, Plugin] = {}
 
-def load_plugin(plugin, source_loc: SourceLocation, state: ExecutionState):
+def load_plugin_entry_point(plugin_name, source_loc: SourceLocation, log: DiagnosticsLogger) -> Plugin|None:
+    result: Plugin|None = loaded_plugin_entry_points.get(plugin_name, None)
+    if not result:
+        if plugin_entry_point := installed_plugin_entry_points.get(plugin_name, None):
+            try:
+                plugin = plugin_entry_point.load()
+                if plugin.name != plugin_entry_point.name:
+                    log.warning("plugin-name-inconsistency", f"plugin entry point name '{plugin_entry_point.name}' does not match plugin name '{plugin.name}'. get someone to fix the code.")
+                result = plugin
+            except Exception as ex:
+                log.error("load-plugin-entry-point-exception", f"exception while loading plugin entry point '{plugin_entry_point.name}': {repr(ex)}", source_loc)
+                log.logger.debug(ex, exc_info=True)
+        else:
+            log.error("plugin-not-found", f"couldn't load plugin '{plugin_name}'. plugin not found. use `%!plugins.list` to list available plugins.", source_loc)
+    return result
+
+def load_plugin(plugin: Plugin, source_loc: SourceLocation, state: ExecutionState) -> None:
+    """Instantiate plugin capabilities and install them into execution state."""
     try:
         core_state = get_private_core_state(state)
 
         plugin_config = setup_newly_constructed_config(plugin.construct_configuration(), empty_factory=EmptyPluginConfiguration, root_config=state.root_config, log=state.log)
-        plugin_actions: ActionNamespace = plugin.construct_actions()
+        plugin_actions: ActionNamespace|None = plugin.construct_actions()
         plugin_hooks = plugin.construct_hooks()
 
         path = plugin.name.split(".")
@@ -80,42 +89,60 @@ def load_plugin(plugin, source_loc: SourceLocation, state: ExecutionState):
             plugin_actions.set_plugin_config(plugin_config)
             core_state.actions.merge(plugin_actions)
 
-        core_state.loaded_plugins.add(plugin)
+        core_state.loaded_plugins[plugin.name] = plugin
 
         if plugin_hooks:
             hooks_context = hooks.HooksContext(state=state, root_config=state.root_config, plugin_config=plugin_config, hooks=plugin_hooks)
             plugin_hooks.on_plugin_loaded(hooks_context)
             core_state.hooks_distributor.add_hooks(hooks_context)
-    except Exception as e:
-        state.log.error("load-plugin-exception", f"exception while loading plugin '{plugin.name}': {repr(e)}", source_loc)
-        state.log.logger.debug(e, exc_info=True)
+    except Exception as ex:
+        state.log.error("load-plugin-exception", f"exception while loading plugin '{plugin.name}': {repr(ex)}", source_loc)
+        state.log.logger.debug(ex, exc_info=True)
+
+def load_plugin_by_name(plugin_name: str, source_loc: SourceLocation, state: ExecutionState) -> None:
+    core_state = get_private_core_state(state)
+    if plugin_name not in core_state.loaded_plugins:
+        plugin: Plugin|None = load_plugin_entry_point(plugin_name, source_loc, state.log)
+        if plugin:
+            load_plugin(plugin, source_loc, state)
 
 @builtin_actions.add_action("prapti.plugins.load")
 def plugins_load(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
-    core_state = get_private_core_state(context.state)
-    global plugins, plugins_dict
+    """Load a plugin. Installs hooks and makes commands/actions available."""
     plugin_name = raw_args.strip()
-    if plugin := plugins_dict.get(plugin_name, None):
-        if plugin not in core_state.loaded_plugins:
-            load_plugin(plugin, context.source_loc, context.state)
-    else:
-        context.log.error("plugin-not-found", f"couldn't load plugin '{plugin_name}'. plugin not found. use `%!plugins.list` to list available plugins.", context.source_loc)
+    load_plugin_by_name(plugin_name, context.source_loc, context.state)
     return None
+
+def _s(count: int):
+    return "s" if count != 1 else ""
 
 @builtin_actions.add_action("!prapti.plugins.list")
 def plugins_list(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
+    """List available plugins"""
     core_state = get_private_core_state(context.state)
-    global plugins
-    if len(plugins) > 0:
-        plugin_lines = [f"- **`{plugin.name}`**: {plugin.description}{' (loaded)' if plugin in core_state.loaded_plugins else ''}" for plugin in plugins]
-        content = "Available plugins:\n\n" + "\n".join(plugin_lines)
+
+    available_plugins: list[Plugin] = []
+    bad_plugin_names: list[str] = []
+    for plugin_name in installed_plugin_entry_points:
+        plugin: Plugin|None = load_plugin_entry_point(plugin_name, context.source_loc, context.log)
+        if plugin:
+            available_plugins.append(plugin)
+        else:
+            bad_plugin_names.append(plugin_name)
+
+    if len(available_plugins) > 0:
+        plugin_lines = [f"- **`{plugin.name}`**: {plugin.description}{' (loaded)' if plugin.name in core_state.loaded_plugins else ''}" for plugin in available_plugins]
+        content = f"Available plugin{_s(len(available_plugins))}:\n\n" + "\n".join(plugin_lines)
     else:
-        content = "No plugins found."
+        content = "No plugins available."
+
+    if len(bad_plugin_names) > 0:
+        plugin_lines = "\n".join(f"- **`{name}`**" for name in bad_plugin_names)
+        content += f"\n\nThe following plugin{_s(len(bad_plugin_names))} could not be accessed due to errors:\n\n{plugin_lines}"
 
     return Message("_prapti", "plugins", [content], is_enabled=False)
 
-# ----------------------------------------------------------------------------
-# responder management
+# responder management -------------------------------------------------------
 
 def lookup_active_responder(state: ExecutionState) -> tuple[str, ResponderContext|None]:
     core_state = get_private_core_state(state)
@@ -125,26 +152,24 @@ def lookup_active_responder(state: ExecutionState) -> tuple[str, ResponderContex
 
 @builtin_actions.add_action("prapti.responder.new")
 def responder_new(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
+    """Create a new responder"""
     core_state = get_private_core_state(context.state)
-    global plugins_dict
     responder_name, plugin_name = raw_args.split()
-    if plugin := plugins_dict.get(plugin_name, None):
-        if plugin not in core_state.loaded_plugins:
-            load_plugin(plugin, context.source_loc, context.state)
-        if plugin in core_state.loaded_plugins:
-            if responder := plugin.construct_responder():
-                plugin_config = getattr(context.root_config.plugins, plugin_name, None)
-                responder_context = ResponderContext(state=context.state,
-                                                     plugin_name=plugin_name,
-                                                     root_config=context.root_config, plugin_config=plugin_config, responder_config=None,
-                                                     responder_name=responder_name, responder=responder, log=context.log)
-                responder_context.responder_config = setup_newly_constructed_config(responder.construct_configuration(responder_context), empty_factory=EmptyResponderConfiguration, root_config=context.root_config, log=context.log)
-                core_state.responder_contexts[responder_name] = responder_context
-                setattr(context.root_config.responders, responder_name, responder_context.responder_config)
-            else:
-                context.log.error("failed-responder-new", "couldn't construct responder '{responder_name}'. plugin '{plugin_name}' did not construct responder.", context.source_loc)
+    load_plugin_by_name(plugin_name, context.source_loc, context.state)
+    if plugin := core_state.loaded_plugins.get(plugin_name, None):
+        if responder := plugin.construct_responder():
+            plugin_config = getattr(context.root_config.plugins, plugin_name, None)
+            responder_context = ResponderContext(state=context.state,
+                                                    plugin_name=plugin_name,
+                                                    root_config=context.root_config, plugin_config=plugin_config, responder_config=None,
+                                                    responder_name=responder_name, responder=responder, log=context.log)
+            responder_context.responder_config = setup_newly_constructed_config(responder.construct_configuration(responder_context), empty_factory=EmptyResponderConfiguration, root_config=context.root_config, log=context.log)
+            core_state.responder_contexts[responder_name] = responder_context
+            setattr(context.root_config.responders, responder_name, responder_context.responder_config)
+        else:
+            context.log.error("failed-responder-new", "couldn't construct responder '{responder_name}'. plugin '{plugin_name}' did not construct responder.", context.source_loc)
     else:
-        context.log.error("plugin-not-found", "couldn't locate responder provider plugin '{plugin_name}'. plugin not found. use `%!plugins.list` to list available plugins.", context.source_loc)
+        context.log.error("failed-responder-new", "couldn't construct responder '{responder_name}'. plugin '{plugin_name}' not loaded.", context.source_loc)
 
 @builtin_actions.add_action("prapti.responder.push")
 def responder_push(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
@@ -156,8 +181,7 @@ def responder_pop(name: str, raw_args: str, context: ActionContext) -> None|str|
     if context.root_config.prapti.responder_stack:
         context.root_config.prapti.responder_stack.pop()
 
-# ----------------------------------------------------------------------------
-# configuration inspection
+# configuration inspection ---------------------------------------------------
 
 def _collect_leaf_configs(config_obj, accumulated_path, result) -> None:
     if isinstance(config_obj, pydantic.BaseModel):
@@ -245,7 +269,6 @@ def _config_dump(contained_in: Any, field_name: str, config_obj, indent, root_co
 
 @builtin_actions.add_action("!prapti.inspect")
 def inspect_config(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
-    #core_state = get_private_core_state(context.state)
     root_config = context.root_config
 
     content = "Configuration parameters:\n\n" + _config_dump(None, "root", root_config, indent=0, root_config=root_config, log=context.log)
