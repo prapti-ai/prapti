@@ -56,9 +56,9 @@ def load_config_file(config_path: pathlib.Path, state: ExecutionState) -> bool:
         try:
             config_file_lines = config_path.read_text(encoding="utf-8").splitlines(keepends=True)
             parse_messages_and_interpret_commands(config_file_lines, config_path, state)
-        except Exception as e:
-            state.log.error("config-file-exception", f"exception while reading configuration file: {repr(e)}", config_path)
-            state.log.logger.debug(e, exc_info=True)
+        except Exception as ex:
+            state.log.error("config-file-exception", f"exception while reading configuration file: {repr(ex)}", config_path)
+            state.log.logger.debug(ex, exc_info=True)
         return True
     return False
 

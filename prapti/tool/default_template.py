@@ -8,8 +8,8 @@ def get_default_template(log: DiagnosticsLogger) -> str:
     template_path = Path(__file__).resolve().parent / "default_template.md"
     try:
         result = template_path.read_text(encoding="utf-8")
-    except Exception as e:
-        log.error("default-template-exception", f"exception while reading default template: {repr(e)}", template_path)
-        log.logger.debug(e, exc_info=True)
+    except Exception as ex:
+        log.error("default-template-exception", f"exception while reading default template: {repr(ex)}", template_path)
+        log.logger.debug(ex, exc_info=True)
         result = "### @user:\n\n"
     return result

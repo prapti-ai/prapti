@@ -214,8 +214,8 @@ def _parse_field_value(field_value_str: str, source_loc: SourceLocation, log: Di
     else:
         try:
             parsed_value = json.loads(field_value_str)
-        except (ValueError, SyntaxError) as e:
-            log.error("config-value-json-parse-error", f"could not parse configuration value '{field_value_str}' as JSON: {repr(e)}", source_loc)
+        except (ValueError, SyntaxError) as ex:
+            log.error("config-value-json-parse-error", f"could not parse configuration value '{field_value_str}' as JSON: {repr(ex)}", source_loc)
             return False, None
     return True, parsed_value
 
