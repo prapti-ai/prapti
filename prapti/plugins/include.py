@@ -3,7 +3,7 @@
 """
 import pathlib
 
-from ..core.plugin import Plugin
+from ..core.plugin import Plugin, PluginCapabilities
 from ..core.action import ActionNamespace, ActionContext
 from ..core.command_message import Message
 
@@ -63,7 +63,8 @@ class IncludePlugin(Plugin):
             api_version = "0.1.0",
             name = "prapti.include",
             version = "0.0.1",
-            description = "Commands for including file contents"
+            description = "Commands for including file contents",
+            capabilities = PluginCapabilities.ACTIONS
         )
 
     def construct_actions(self) -> ActionNamespace|None:

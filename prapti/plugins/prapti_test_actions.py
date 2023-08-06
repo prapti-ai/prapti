@@ -3,7 +3,7 @@
 
     see test_actions.md for testing
 """
-from ..core.plugin import Plugin
+from ..core.plugin import Plugin, PluginCapabilities
 from ..core.action import ActionNamespace, ActionContext
 from ..core.command_message import Message
 
@@ -30,7 +30,8 @@ class TestActionsPlugin(Plugin):
             api_version = "0.1.0",
             name = "prapti.test.test_actions",
             version = "0.0.1",
-            description = "Actions used to test Prapti"
+            description = "Actions used to test Prapti",
+            capabilities = PluginCapabilities.ACTIONS
         )
 
     def construct_actions(self) -> ActionNamespace|None:

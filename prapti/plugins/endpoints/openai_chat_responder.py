@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, ConfigDict
 import openai
 import tiktoken
 
-from ...core.plugin import Plugin
+from ...core.plugin import Plugin, PluginCapabilities
 from ...core.command_message import Message
 from ...core.configuration import VarRef, resolve_var_refs
 from ...core.responder import Responder, ResponderContext
@@ -252,7 +252,8 @@ class OpenAIChatResponderPlugin(Plugin):
             api_version = "0.1.0",
             name = "openai.chat",
             version = "0.0.1",
-            description = "Responder using the OpenAI Chat Completion API"
+            description = "Responder using the OpenAI Chat Completion API",
+            capabilities = PluginCapabilities.RESPONDER
         )
 
     def construct_responder(self) -> Responder|None:

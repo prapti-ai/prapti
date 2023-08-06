@@ -23,7 +23,7 @@ import json
 from pydantic import BaseModel, Field, ConfigDict
 import gpt4all
 
-from ...core.plugin import Plugin
+from ...core.plugin import Plugin, PluginCapabilities
 from ...core.command_message import Message
 from ...core.configuration import VarRef, resolve_var_refs
 from ...core.responder import Responder, ResponderContext
@@ -168,7 +168,8 @@ class GPT4AllChatResponderPlugin(Plugin):
             api_version = "0.1.0",
             name = "experimental.gpt4all.chat",
             version = "0.0.1",
-            description = "Responder using the GPT4All Chat Completion API"
+            description = "Responder using the GPT4All Chat Completion API",
+            capabilities = PluginCapabilities.RESPONDER
         )
 
     def construct_responder(self) -> Responder|None:
