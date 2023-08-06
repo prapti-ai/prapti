@@ -2,7 +2,7 @@
     test plugin with non-empty config
 """
 from pydantic import BaseModel, Field, ConfigDict
-from ..core.plugin import Plugin, PluginCapabilities
+from ..core.plugin import Plugin, PluginCapabilities, PluginContext
 from ..core.configuration import VarRef
 
 class TestConfigConfiguration(BaseModel):
@@ -26,7 +26,7 @@ class TestConfigPlugin(Plugin):
             capabilities = PluginCapabilities(0)
         )
 
-    def construct_configuration(self) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
+    def construct_configuration(self, context: PluginContext) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
         return TestConfigConfiguration()
 
 prapti_plugin = TestConfigPlugin()

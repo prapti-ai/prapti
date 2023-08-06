@@ -21,7 +21,7 @@ class ResponderContext:
     root_config: RootConfiguration
     plugin_config: Any
     responder_config: Any
-    # NOTE: ^^^ responder_config will be an EmptyResponderConfiguration before construct_configuration is called
+    # NOTE: ^^^ responder_config will be None before construct_configuration is called
     responder_name: str
     responder: 'Responder'
     log: DiagnosticsLogger
@@ -29,9 +29,8 @@ class ResponderContext:
 class Responder(metaclass=abc.ABCMeta):
     """Base class for responders"""
 
-    @abc.abstractmethod
     def construct_configuration(self, context: ResponderContext) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
-        pass
+        return None
 
     @abc.abstractmethod
     def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
