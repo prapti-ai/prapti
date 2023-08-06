@@ -22,7 +22,7 @@ jobs:
       - name: Run Prapti tests (in-tree prapti package, with link checks)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: python -m pytest --check-links .
+        run: python -m pytest --check-links --check-links-ignore "http://localhost.*" .
       - name: Run Prapti tests (installed prapti package)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
