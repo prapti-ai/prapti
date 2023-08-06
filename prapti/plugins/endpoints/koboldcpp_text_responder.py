@@ -15,7 +15,7 @@ import json
 import requests
 from pydantic import BaseModel, ConfigDict, Field
 
-from ...core.plugin import Plugin, PluginCapabilities
+from ...core.plugin import Plugin, PluginCapabilities, PluginContext
 from ...core.command_message import Message
 from ...core.configuration import VarRef, resolve_var_refs
 from ...core.responder import Responder, ResponderContext
@@ -105,7 +105,7 @@ class KoboldcppResponderPlugin(Plugin):
             capabilities = PluginCapabilities.RESPONDER
         )
 
-    def construct_responder(self) -> Responder|None:
+    def construct_responder(self, context: PluginContext) -> Responder|None:
         return KoboldcppResponder()
 
 prapti_plugin = KoboldcppResponderPlugin()

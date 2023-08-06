@@ -12,7 +12,7 @@ import shutil
 from datetime import datetime
 from dataclasses import dataclass
 
-from ..core.plugin import Plugin, PluginCapabilities
+from ..core.plugin import Plugin, PluginCapabilities, PluginContext
 from ..core.hooks import Hooks, HooksContext
 from ..core.logger import DiagnosticsLogger
 
@@ -237,7 +237,7 @@ class GitlogPlugin(Plugin):
             capabilities = PluginCapabilities.HOOKS
         )
 
-    def construct_hooks(self) -> Hooks|None:
+    def construct_hooks(self, context: PluginContext) -> Hooks|None:
         return GitlogHooks()
 
 prapti_plugin = GitlogPlugin()

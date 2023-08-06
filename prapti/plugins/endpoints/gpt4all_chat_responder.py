@@ -23,7 +23,7 @@ import json
 from pydantic import BaseModel, Field, ConfigDict
 import gpt4all
 
-from ...core.plugin import Plugin, PluginCapabilities
+from ...core.plugin import Plugin, PluginCapabilities, PluginContext
 from ...core.command_message import Message
 from ...core.configuration import VarRef, resolve_var_refs
 from ...core.responder import Responder, ResponderContext
@@ -172,7 +172,7 @@ class GPT4AllChatResponderPlugin(Plugin):
             capabilities = PluginCapabilities.RESPONDER
         )
 
-    def construct_responder(self) -> Responder|None:
+    def construct_responder(self, context: PluginContext) -> Responder|None:
         return GPT4AllChatResponder()
 
 prapti_plugin = GPT4AllChatResponderPlugin()

@@ -30,7 +30,7 @@ import re
 
 from pydantic import BaseModel, Field
 
-from ..core.plugin import Plugin, PluginCapabilities
+from ..core.plugin import Plugin, PluginCapabilities, PluginContext
 from ..core.action import ActionNamespace, ActionContext
 from ..core.hooks import Hooks, HooksContext
 from ..core.command_message import Message
@@ -208,13 +208,13 @@ class AgentsPlugin(Plugin):
             capabilities = PluginCapabilities.ACTIONS | PluginCapabilities.HOOKS
         )
 
-    def construct_configuration(self) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
+    def construct_configuration(self, context: PluginContext) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
         return AgentsPluginConfiguration()
 
-    def construct_actions(self) -> ActionNamespace|None:
+    def construct_actions(self, context: PluginContext) -> ActionNamespace|None:
         return _actions
 
-    def construct_hooks(self) -> Hooks|None:
+    def construct_hooks(self, context: PluginContext) -> Hooks|None:
         return AgentsHooks()
 
 prapti_plugin = AgentsPlugin()
