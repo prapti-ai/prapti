@@ -12,6 +12,7 @@ import json
 from pydantic import BaseModel, Field, ConfigDict
 import openai
 
+from . import openai_globals # ensure openai globals are saved, no matter which module is loaded first
 from ...core.plugin import Plugin, PluginCapabilities, PluginContext
 from ...core.command_message import Message
 from ...core.configuration import VarRef, resolve_var_refs
@@ -123,9 +124,11 @@ class LocalOpenAIChatResponder(Responder):
         config = resolve_var_refs(config, context.root_config, context.log)
         context.log.debug(f"local.openai.chat: resolved: {config = }", context.state.input_file_path)
 
-        openai.api_base = config.api_base
         openai.api_key = "EMPTY"
         openai.organization = "EMPTY"
+        openai.api_base = config.api_base
+        openai.api_type = "open_ai"
+        openai.api_version = None
 
         messages = convert_message_sequence_to_openai_messages(input_, context.log)
 
