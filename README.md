@@ -11,7 +11,7 @@ Prapti is a tool for prompting Large Language Models (LLMs) with an editable his
 - Easily edit the whole conversation history/context window, including previous LLM outputs
 - Inline configuration syntax: easily change LLM parameters and switch language models ("responders") with each round of the conversation
 - Designed to be extensible with plugins (responders, commands and processing hooks)
-- Supports OpenAI, Koboldcpp, GPT4All (experimental), or add your favourite LLM back-end by implementing a Responder plugin
+- Supports OpenAI, OpenAI-compatible local servers, Koboldcpp, GPT4All (experimental), or add your favourite LLM back-end by implementing a Responder plugin
 
 Using prapti is an interactive experience, but you can get an idea of what it might be like by reading [your first prapti conversation](start_here.md).
 
@@ -39,7 +39,7 @@ pip install git+https://github.com/prapti-ai/prapti
 We recommend running prapti in a Python virtual environment such as
 [venv](https://docs.python.org/3/tutorial/venv.html).
 
-### 2. Set up your OpenAI API key (or configure a local LLM)
+### 2. Set up your OpenAI API key (or [configure a local LLM](docs/local_llms.md))
 
 ```
 export OPENAI_API_KEY=your-key-goes-here

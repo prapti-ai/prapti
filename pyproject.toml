@@ -55,6 +55,7 @@ prapti = "prapti.tool:main"
 
 "openai.chat" = "prapti.plugins.endpoints.openai_chat_responder:prapti_plugin"
 "koboldcpp.text" = "prapti.plugins.endpoints.koboldcpp_text_responder:prapti_plugin"
+"local.openai.chat" = "prapti.plugins.endpoints.local_openai_chat_responder:prapti_plugin"
 "experimental.gpt4all.chat" = "prapti.plugins.endpoints.gpt4all_chat_responder:prapti_plugin"
 
 "prapti.include" = "prapti.plugins.include:prapti_plugin"

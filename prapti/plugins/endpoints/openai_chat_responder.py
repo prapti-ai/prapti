@@ -195,6 +195,10 @@ def convert_message_sequence_to_openai_messages(message_sequence: list[Message],
 class OpenAIChatResponder(Responder):
     def __init__(self):
         setup_api_key_and_organization()
+        # save and restore OpenAI global variables because local.openai.chat may alter them
+        self._openai_api_base = openai.api_base
+        self._openai_api_key = openai.api_key
+        self._openai_organization = openai.organization
 
     def construct_configuration(self, context: ResponderContext) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
         return OpenAIChatResponderConfiguration(), [("model", VarRef("model")), ("temperature", VarRef("temperature")), ("n", VarRef("n"))]
@@ -204,6 +208,10 @@ class OpenAIChatResponder(Responder):
         context.log.debug(f"openai.chat: input: {config = }", context.state.input_file_path)
         config = resolve_var_refs(config, context.root_config, context.log)
         context.log.debug(f"openai.chat: resolved: {config = }", context.state.input_file_path)
+
+        openai.api_base = self._openai_api_base
+        openai.api_key = self._openai_api_key
+        openai.organization = self._openai_organization
 
         messages = convert_message_sequence_to_openai_messages(input_, context.log)
 
