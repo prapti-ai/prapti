@@ -11,7 +11,7 @@ from .execution_state import ExecutionState
 
 @dataclass
 class CoreExecutionState: # private to core
-    loaded_plugins: set[Plugin] = field(default_factory=set)
+    loaded_plugins: dict[str, Plugin] = field(default_factory=dict)
     actions: ActionNamespace = field(default_factory=ActionNamespace)
     responder_contexts: dict[str, ResponderContext] = field(default_factory=dict) # keyed by responder instance name
     hooks_distributor: HooksDistributor = field(default_factory=HooksDistributor)
