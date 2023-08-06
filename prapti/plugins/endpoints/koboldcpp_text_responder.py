@@ -15,7 +15,7 @@ import json
 import requests
 from pydantic import BaseModel, ConfigDict, Field
 
-from ...core.plugin import Plugin
+from ...core.plugin import Plugin, PluginCapabilities
 from ...core.command_message import Message
 from ...core.configuration import VarRef, resolve_var_refs
 from ...core.responder import Responder, ResponderContext
@@ -101,7 +101,8 @@ class KoboldcppResponderPlugin(Plugin):
             api_version = "0.1.0",
             name = "koboldcpp.text",
             version = "0.0.1",
-            description = "Responder using the Koboldcpp text completions API"
+            description = "Responder using the Koboldcpp text completions API",
+            capabilities = PluginCapabilities.RESPONDER
         )
 
     def construct_responder(self) -> Responder|None:

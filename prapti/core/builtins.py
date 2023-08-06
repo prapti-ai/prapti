@@ -14,10 +14,10 @@ from .configuration import EmptyPluginConfiguration, EmptyResponderConfiguration
 from .command_message import Message
 from .action import ActionNamespace, ActionContext
 from .responder import ResponderContext
-from . import hooks
+from .hooks import Hooks, HooksContext
 from .source_location import SourceLocation
 from .logger import DiagnosticsLogger
-from .plugin import Plugin
+from .plugin import Plugin, PluginCapabilities
 
 builtin_actions: ActionNamespace = ActionNamespace()
 
@@ -68,8 +68,8 @@ def load_plugin(plugin: Plugin, source_loc: SourceLocation, state: ExecutionStat
         core_state = get_private_core_state(state)
 
         plugin_config = setup_newly_constructed_config(plugin.construct_configuration(), empty_factory=EmptyPluginConfiguration, root_config=state.root_config, log=state.log)
-        plugin_actions: ActionNamespace|None = plugin.construct_actions()
-        plugin_hooks = plugin.construct_hooks()
+        plugin_actions: ActionNamespace|None = plugin.construct_actions() if PluginCapabilities.ACTIONS in plugin.capabilities else None
+        plugin_hooks: Hooks|None = plugin.construct_hooks() if PluginCapabilities.HOOKS in plugin.capabilities else None
 
         path = plugin.name.split(".")
         namespace_names, plugin_name = path[:-1], path[-1]
@@ -92,7 +92,7 @@ def load_plugin(plugin: Plugin, source_loc: SourceLocation, state: ExecutionStat
         core_state.loaded_plugins[plugin.name] = plugin
 
         if plugin_hooks:
-            hooks_context = hooks.HooksContext(state=state, root_config=state.root_config, plugin_config=plugin_config, hooks=plugin_hooks)
+            hooks_context = HooksContext(state=state, root_config=state.root_config, plugin_config=plugin_config, hooks=plugin_hooks)
             plugin_hooks.on_plugin_loaded(hooks_context)
             core_state.hooks_distributor.add_hooks(hooks_context)
     except Exception as ex:
@@ -157,17 +157,20 @@ def responder_new(name: str, raw_args: str, context: ActionContext) -> None|str|
     responder_name, plugin_name = raw_args.split()
     load_plugin_by_name(plugin_name, context.source_loc, context.state)
     if plugin := core_state.loaded_plugins.get(plugin_name, None):
-        if responder := plugin.construct_responder():
-            plugin_config = getattr(context.root_config.plugins, plugin_name, None)
-            responder_context = ResponderContext(state=context.state,
-                                                    plugin_name=plugin_name,
-                                                    root_config=context.root_config, plugin_config=plugin_config, responder_config=None,
-                                                    responder_name=responder_name, responder=responder, log=context.log)
-            responder_context.responder_config = setup_newly_constructed_config(responder.construct_configuration(responder_context), empty_factory=EmptyResponderConfiguration, root_config=context.root_config, log=context.log)
-            core_state.responder_contexts[responder_name] = responder_context
-            setattr(context.root_config.responders, responder_name, responder_context.responder_config)
+        if PluginCapabilities.RESPONDER in plugin.capabilities:
+            if responder := plugin.construct_responder():
+                plugin_config = getattr(context.root_config.plugins, plugin_name, None)
+                responder_context = ResponderContext(state=context.state,
+                                                        plugin_name=plugin_name,
+                                                        root_config=context.root_config, plugin_config=plugin_config, responder_config=None,
+                                                        responder_name=responder_name, responder=responder, log=context.log)
+                responder_context.responder_config = setup_newly_constructed_config(responder.construct_configuration(responder_context), empty_factory=EmptyResponderConfiguration, root_config=context.root_config, log=context.log)
+                core_state.responder_contexts[responder_name] = responder_context
+                setattr(context.root_config.responders, responder_name, responder_context.responder_config)
+            else:
+                context.log.error("responder-new-failed", "couldn't construct responder '{responder_name}'. plugin '{plugin_name}' did not construct responder.", context.source_loc)
         else:
-            context.log.error("failed-responder-new", "couldn't construct responder '{responder_name}'. plugin '{plugin_name}' did not construct responder.", context.source_loc)
+            context.log.error("responder-new-not-a-responder", "couldn't construct responder '{responder_name}'. plugin '{plugin_name}' does not provide a responder.", context.source_loc)
     else:
         context.log.error("failed-responder-new", "couldn't construct responder '{responder_name}'. plugin '{plugin_name}' not loaded.", context.source_loc)
 

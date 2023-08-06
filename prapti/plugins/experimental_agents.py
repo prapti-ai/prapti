@@ -30,7 +30,7 @@ import re
 
 from pydantic import BaseModel, Field
 
-from ..core.plugin import Plugin
+from ..core.plugin import Plugin, PluginCapabilities
 from ..core.action import ActionNamespace, ActionContext
 from ..core.hooks import Hooks, HooksContext
 from ..core.command_message import Message
@@ -204,14 +204,15 @@ class AgentsPlugin(Plugin):
             api_version = "0.1.0",
             name = "prapti.experimental.agents",
             version = "0.0.1",
-            description = "Multi-agent responses"
+            description = "Multi-agent responses",
+            capabilities = PluginCapabilities.ACTIONS | PluginCapabilities.HOOKS
         )
-
-    def construct_actions(self) -> ActionNamespace|None:
-        return _actions
 
     def construct_configuration(self) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
         return AgentsPluginConfiguration()
+
+    def construct_actions(self) -> ActionNamespace|None:
+        return _actions
 
     def construct_hooks(self) -> Hooks|None:
         return AgentsHooks()
