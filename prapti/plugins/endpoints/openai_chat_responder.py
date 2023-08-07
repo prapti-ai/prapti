@@ -5,11 +5,13 @@ import os
 import datetime
 import inspect
 import json
+import copy
 
 from pydantic import BaseModel, Field, ConfigDict
 import openai
 import tiktoken
 
+from . import openai_globals # ensure openai globals are saved, no matter which module is loaded first
 from ...core.plugin import Plugin, PluginCapabilities, PluginContext
 from ...core.command_message import Message
 from ...core.configuration import VarRef, resolve_var_refs
@@ -27,22 +29,23 @@ from ...core.logger import DiagnosticsLogger
 # therefore we do not support specifying the API key in the configuration space
 # i.e. we do not allow secrets to be set in input markdown or in our config files.
 
-def setup_api_key_and_organization() -> None:
-    """setup OpenAI API key and organization from environment variables"""
+def load_api_key_and_organization() -> openai_globals.OpenAIGlobals:
+    """Load OpenAI API key and organization from environment variables"""
+
+    result = copy.copy(openai_globals.saved_openai_globals)
 
     # first check Prapti-specific environment variables,
     # then fall-back to OpenAI standard varaiables.
     # put your API key in the OPENAI_API_KEY environment variable, see:
     # https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety
 
-    openai_api_key = os.environ.get("PRAPTI_OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY", None))
-    openai_organization = os.environ.get("PRAPTI_OPENAI_ORGANIZATION", os.environ.get("OPENAI_ORGANIZATION", None))
+    result.api_key = os.environ.get("PRAPTI_OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY", None))
+    result.organization = os.environ.get("PRAPTI_OPENAI_ORGANIZATION", os.environ.get("OPENAI_ORGANIZATION", None))
 
-    if openai_api_key is None:
+    if result.api_key is None:
         raise ValueError("OpenAI API key not set in environment variable.")
 
-    openai.api_key = openai_api_key
-    openai.organization = openai_organization
+    return result
 
 # chat API parameters --------------------------------------------------------
 
@@ -194,7 +197,8 @@ def convert_message_sequence_to_openai_messages(message_sequence: list[Message],
 
 class OpenAIChatResponder(Responder):
     def __init__(self):
-        setup_api_key_and_organization()
+        # save OpenAI global variables because local.openai.chat may alter them
+        self._openai_globals = load_api_key_and_organization()
 
     def construct_configuration(self, context: ResponderContext) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
         return OpenAIChatResponderConfiguration(), [("model", VarRef("model")), ("temperature", VarRef("temperature")), ("n", VarRef("n"))]
@@ -204,6 +208,8 @@ class OpenAIChatResponder(Responder):
         context.log.debug(f"openai.chat: input: {config = }", context.state.input_file_path)
         config = resolve_var_refs(config, context.root_config, context.log)
         context.log.debug(f"openai.chat: resolved: {config = }", context.state.input_file_path)
+
+        openai_globals.restore_openai_globals(self._openai_globals)
 
         messages = convert_message_sequence_to_openai_messages(input_, context.log)
 
