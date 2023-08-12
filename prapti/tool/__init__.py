@@ -80,10 +80,10 @@ def locate_user_config_file_path(log: DiagnosticsLogger) -> pathlib.Path | None:
             result = pathlib.Path.home() / '.prapti' / 'config.md'
 
     if result.exists() and result.is_file():
-        log.detail(f"using user config file at '{result}'")
+        log.detail(f"using user config file '{result}'")
         return result
     else:
-        log.detail("could not locate a user config file.")
+        log.detail("no user config file found (not a problem unless you thought you'd created one)")
         return None
 
 def load_config_file(config_path: pathlib.Path, state: ExecutionState) -> bool:
