@@ -2,12 +2,13 @@
     Command line tool for generating markdown chat responses
 """
 import argparse
+import os
 import pathlib
 from typing import Sequence, TextIO
 from dataclasses import dataclass
 
 from ..__init__ import __version__
-from ..core.logger import create_diagnostics_logger
+from ..core.logger import create_diagnostics_logger, DiagnosticsLogger
 from ..core._core_execution_state import CoreExecutionState
 from ..core.execution_state import ExecutionState
 from ..core.chat_markdown_parser import parse_messages
@@ -46,6 +47,45 @@ def parse_messages_and_interpret_commands(lines: list[str], file_path: pathlib.P
     # this step does not modify the message sequence
     state.message_sequence += message_sequence
 
+def locate_user_config_file_path(log: DiagnosticsLogger) -> pathlib.Path | None:
+    """Compute the location of the user's prapti config.md file.
+
+    If the XDG_CONFIG_HOME environment variable is set and not empty,
+    the user config file must be located at:
+        $XDG_CONFIG_HOME/prapti/config.md
+
+    Otherwise, search in the following locations:
+        ~/.config/prapti/config.md (the XDG-compatible default location)
+        ~/.prapti/config.md (the legacy location)
+    """
+    xdg_config_home = os.environ.get("XDG_CONFIG_HOME", None)
+    if xdg_config_home: # set, not empty
+        log.detail("checking for user config file at '$XDG_CONFIG_HOME/prapti/config.md' because the XDG_CONFIG_HOME environment variable is set")
+        xdg_config_home_path = pathlib.Path(xdg_config_home)
+        if xdg_config_home_path.exists() and xdg_config_home_path.is_dir():
+            result = xdg_config_home_path / "prapti" / "config.md"
+        else:
+            log.warning("bad-xdg-config-home", f"will not load user config file. XDG_CONFIG_HOME environment variable is set to '{xdg_config_home}' but this is not an existing directory")
+            return None
+    else: # XDG_CONFIG_HOME environment var empty or not set
+        # try the default XDG path
+        log.detail("checking for user config file at '$HOME/.config/prapti/config.md'")
+        default_xdg_config_home = pathlib.Path.home() / ".config"
+        if (default_xdg_config_home / "prapti").exists():
+            # if there is an XDG-compatible prapti directory, always use it, don't check $HOME/.prapti
+            result = default_xdg_config_home / "prapti" / "config.md"
+        else:
+            # fall back to legacy configuration file location
+            log.detail("checking for user config file at '$HOME/.prapti/config.md'")
+            result = pathlib.Path.home() / '.prapti' / 'config.md'
+
+    if result.exists() and result.is_file():
+        log.detail(f"using user config file '{result}'")
+        return result
+    else:
+        log.detail("no user config file found (not a problem unless you thought you'd created one)")
+        return None
+
 def load_config_file(config_path: pathlib.Path, state: ExecutionState) -> bool:
     """load the config file at `config_path` into `state`, if it exists.
         return `True` if the config file exists as a file, whether or not it
@@ -70,8 +110,8 @@ def default_load_config_files(state: ExecutionState):
     """
     found_config_file = False
 
-    # user config file i.e. ~/.prapti/config.md
-    found_config_file |= load_config_file(pathlib.Path.home() / '.prapti' / 'config.md', state)
+    if user_config_file_path := locate_user_config_file_path(state.log):
+        found_config_file |= load_config_file(user_config_file_path, state)
 
     # in-tree `.prapticonfig.md` files:
     # (.editorconfig algorithm) starting from the directory containing the input markdown file,
