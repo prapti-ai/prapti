@@ -6,7 +6,7 @@ Prapti uses configuration files to store setup details and parameter settings. T
 
 Before processing the input markdown file, Prapti searches for configuration files. The search process includes:
 
-1. Loading a user configuration file from the user's home directory, if such a file exists. Locations that are searched are: `$XDG_CONFIG_HOME/prapti/config.md`, `~/.config/prapti/config.md`, and `~/.prapti/config.md`. Only the first user configuration file that is found is loaded. If the `$XDG_CONFIG_HOME` environment variable is set, only the first path is included in the search.
+1. Loading a user configuration file from the user's home directory, if such a file exists. The following locations are searched: `$XDG_CONFIG_HOME/prapti/config.md`, `~/.config/prapti/config.md`, and `~/.prapti/config.md`. Only the first user configuration file that is found is loaded. If the `$XDG_CONFIG_HOME` environment variable is set, only the first location is included in the search.
 2. Searching for `.prapticonfig.md` files in the directory of the input markdown file and its parent directories. This search continues upwards until a configuration file with a line `% config_root = true` is found. These files form the in-tree configuration file set.
 3. Loading the in-tree configuration files, starting from the root and moving towards the input file's directory. This way, settings in `.prapticonfig.md` files closer to the input file take precedence over settings from files closer to the root.
 
