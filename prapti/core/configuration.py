@@ -80,6 +80,17 @@ class RootConfiguration(BaseModel):
     # ^^^ NOTE: defaultdict behavior is that _var_ref_assignments[x] will instantiate an innner dict if x is missing;
     # therefore always use _var_ref_assignments.get(x) when you don't want to instantiate an inner dict
 
+# ---------------------------------------------------------------------------
+
+def get_subobject(obj, dotted_name: str, default: Any):
+    for component in dotted_name.split("."):
+        if not hasattr(obj, component):
+            return default
+        obj = getattr(obj, component)
+    return obj
+
+# ---------------------------------------------------------------------------
+
 # Late-bound user-defined configuration variables implementation
 # ==============================================================
 #
