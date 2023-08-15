@@ -15,7 +15,7 @@ from ..core.command_interpreter import interpret_commands
 from ..core.builtins import builtin_actions, lookup_active_responder
 from ..core.command_message import flatten_message_content, Message
 from ..core.load_configuration import load_config_file, default_load_config_files
-from .default_template import get_default_template
+from .start_template import get_start_template
 
 # command line args ----------------------------------------------------------
 
@@ -197,8 +197,8 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
         lines = file.readlines()
         # early-out if the input file is effectively empty
         if not lines or all(not line.strip() for line in lines): # if file is effectively empty
-            state.log.info("empty-input", "here's the default template. start writing.", state.input_file_path)
-            file.write(get_default_template(state.log))
+            state.log.info("empty-input", "here's the start template. start writing.", state.input_file_path)
+            file.write(get_start_template(state))
             return 0
 
         input_messages: list[Message] = parse_messages(lines, state.input_file_path)
