@@ -144,7 +144,36 @@ def test_set_responder_config_fields(tmp_path, no_user_config, monkeypatch):
     assert config.a_string == "hello"
     assert config.a_list_of_strings == ["one", "two", "three"]
 
-TEST_SET_LATE_BOUND_VARS_PROMPT = """\
+TEST_SET_LATE_BOUND_VARS_PLUGIN_PROMPT = """\
+% plugins.load prapti.test.test_responder
+% responder.new default prapti.test.test_responder
+% plugins.prapti.test.test_responder.an_int = var(intvar)
+% plugins.prapti.test.test_responder.a_string = var(stringvar)
+% vars.intvar = 1024
+% vars.stringvar = "test 1 2 3"
+### @user:
+
+Hello
+"""
+# ^^^ tests both qualified (vars.) and unqualified variable assignment
+def test_set_late_bound_vars_plugin_config(tmp_path, no_user_config, monkeypatch):
+    """Test setting a late bound vars and checking that they are used in responder"""
+    temp_md_path = tmp_path / "test_set_late_bound_vars_temp.md"
+    temp_md_path.write_text(TEST_SET_LATE_BOUND_VARS_PLUGIN_PROMPT, encoding="utf-8")
+
+    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", "--no-default-config", str(temp_md_path)])
+
+    import prapti.tool
+    test_exfil = {}
+    exit_status = prapti.tool.main(test_exfil=test_exfil)
+    assert exit_status == 0
+
+    resolved_plugin_config: TestResponderConfiguration = test_exfil["test_responder_resolved_plugin_config"]
+    # check values set in the markdown file
+    assert resolved_plugin_config.an_int == 1024
+    assert resolved_plugin_config.a_string == "test 1 2 3"
+
+TEST_SET_LATE_BOUND_VARS_RESPONDER_PROMPT = """\
 % plugins.load prapti.test.test_responder
 % responder.new default prapti.test.test_responder
 % vars.temperature = 100
@@ -155,10 +184,10 @@ TEST_SET_LATE_BOUND_VARS_PROMPT = """\
 Hello
 """
 # ^^^ tests both qualified (vars.) and unqualified variable assignment
-def test_set_late_bound_vars(tmp_path, no_user_config, monkeypatch):
+def test_set_late_bound_vars_responder_config(tmp_path, no_user_config, monkeypatch):
     """Test setting a late bound vars and checking that they are used in responder"""
     temp_md_path = tmp_path / "test_set_late_bound_vars_temp.md"
-    temp_md_path.write_text(TEST_SET_LATE_BOUND_VARS_PROMPT, encoding="utf-8")
+    temp_md_path.write_text(TEST_SET_LATE_BOUND_VARS_RESPONDER_PROMPT, encoding="utf-8")
 
     monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", "--no-default-config", str(temp_md_path)])
 
@@ -167,7 +196,7 @@ def test_set_late_bound_vars(tmp_path, no_user_config, monkeypatch):
     exit_status = prapti.tool.main(test_exfil=test_exfil)
     assert exit_status == 0
 
-    resolved_config: TestResponderConfiguration = test_exfil["test_responder_resolved_config"]
+    resolved_config: TestResponderConfiguration = test_exfil["test_responder_resolved_responder_config"]
     # check values set in the markdown file
     assert resolved_config.temperature == 100
     assert resolved_config.model == "test model"
