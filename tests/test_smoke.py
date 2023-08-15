@@ -2,7 +2,7 @@
     Smoke tests. Simple integration tests that check basic functionality.
 """
 
-def test_dry_run_tool(temp_markdown_file_path, monkeypatch):
+def test_dry_run_tool(temp_markdown_file_path, no_user_config, monkeypatch):
     """Dry-run prapti tool against every markdown file in the repository
     and check for expected exit status. This should catch basic crashes.
     By using the `--strict` option we aim to catch other errors,
@@ -30,7 +30,7 @@ CAPITAL_CITY_OF_ENGLAND_PROMPT = """\
 
 What is the capital city of England? Give your answer as a single word.
 """
-def test_live_tool(tmp_path, monkeypatch):
+def test_live_tool(tmp_path, no_user_config, monkeypatch):
     """Live-run prapti tool with default responder (OpenAI). Check that we got a reasonable response."""
     temp_md_path = tmp_path / "test_live_tool_temp.md"
     temp_md_path.write_text(CAPITAL_CITY_OF_ENGLAND_PROMPT, encoding="utf-8")
