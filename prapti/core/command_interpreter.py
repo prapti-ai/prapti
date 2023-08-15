@@ -86,7 +86,13 @@ def _interpret_command(command_text: str, is_final_message: bool, source_loc: So
     return result
 
 def interpret_commands(message_sequence: list[Message], state: ExecutionState) -> None:
-    """"for each enabled message in the sequence, interpret enabled commands. store command results in command.result field"""
+    """"for each enabled message in the sequence, interpret enabled commands. store command results in command.result field
+    NOTE: the possible side effects of interpreting commands are:
+    - changes to the configuration tree
+    - mutation of state or plugin internals, including loading plugins
+    - generation of command/action results, which are stored in the command.result field
+    this step does not modify the message sequence
+    """
     final_message = message_sequence[-1] # FIXME: this won't work as intened if we invoke interpret_commands multiple times e.g. for config files
     for message in message_sequence:
         if message.is_enabled:
@@ -94,3 +100,19 @@ def interpret_commands(message_sequence: list[Message], state: ExecutionState) -
             for item in message.content:
                 if isinstance(item, Command) and item.is_enabled:
                     item.result = _interpret_command(command_text=item.text, is_final_message=is_final_message, source_loc=item.source_loc, state=state)
+
+# `% config_root = true` helper ----------------------------------------------
+# for loading in-tree .prapticonfig.md files
+
+config_root_regex = re.compile(r"^\s*(prapti\.)?(config_root)\s*(=)\s*(true)\s*")
+# ^^^ Regex that matches `config_root = true` and `prapti.config_root = true`
+
+def is_config_root(config_message_sequence: list[Message]) -> bool:
+    """given a .prapticonfig.md message sequence, return true if `true` is assigned to `prapti.config_root`, without executing or interpreting any commands."""
+    for message in config_message_sequence:
+        if message.is_enabled:
+            for item in message.content:
+                if isinstance(item, Command) and item.is_enabled:
+                    if re.match(config_root_regex, item.text):
+                        return True
+    return False

@@ -1,7 +1,7 @@
 import pathlib
+import pytest
 
 from prapti.core.execution_state import ExecutionState
-from prapti.plugins.prapti_test_responder import TestResponderConfiguration
 
 MINIMAL_PROMPT_MD = """\
 ### @user:
@@ -16,7 +16,7 @@ Load a responder, but we don't expect this to load
 def test_no_default_config(tmp_path: pathlib.Path, monkeypatch):
     """Test that when the --no-default-config flag is specified, no default responder is loaded"""
 
-    # set up mock user config.md and prapticonfig.md in all the places, so we can check that none of them load
+    # set up mock user config.md and .prapticonfig.md in all the places, so we can check that none of them load
 
     # set up mocked XDG_CONFIG_HOME and write config.md
     mock_xdg_config_home = tmp_path / "mock_xdg_config_home"
@@ -220,13 +220,13 @@ def test_load_user_config_inhibits_fallback_config(tmp_path: pathlib.Path, monke
     state: ExecutionState = test_exfil["state"]
     assert state.root_config.plugins.prapti.test.test_config.a_string == "Loaded from $XDG_CONFIG_HOME/prapti/config.md"
 
-PRAPTI_CONFIG_MD = """\
+PRAPTICONFIG_MD = """\
 % plugins.load prapti.test.test_responder
 % responder.new default prapti.test.test_responder
 % responders.default.a_string = "Loaded from .prapticonfig.md"
 """
 def test_prapticonfig_md(tmp_path: pathlib.Path, monkeypatch):
-    """Test loading configuration from prapticonfig.md"""
+    """Test loading configuration from .prapticonfig.md"""
 
     # clear XDG_CONFIG_HOME, set up empty mocked user home directory
     monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
@@ -242,7 +242,7 @@ def test_prapticonfig_md(tmp_path: pathlib.Path, monkeypatch):
 
     # .prapticonfig.md
     temp_prapticonfig_md_path = tmp_path / ".prapticonfig.md"
-    temp_prapticonfig_md_path.write_text(PRAPTI_CONFIG_MD, encoding="utf-8")
+    temp_prapticonfig_md_path.write_text(PRAPTICONFIG_MD, encoding="utf-8")
 
     # minimal md input file
     temp_md_path = tmp_path / "test_prapticonfig_md.md"
@@ -258,12 +258,12 @@ def test_prapticonfig_md(tmp_path: pathlib.Path, monkeypatch):
     state: ExecutionState = test_exfil["state"]
     assert state.root_config.responders.default.a_string == "Loaded from .prapticonfig.md"
 
-PRAPTI_CONFIG_MD_NO_RESPONDER = """\
+PRAPTICONFIG_MD_NO_RESPONDER = """\
 % plugins.load prapti.test.test_config
 % plugins.prapti.test.test_config.a_string = "Loaded from .prapticonfig.md"
 """
 def test_load_prapticonfig_md_inhibits_fallback_config(tmp_path: pathlib.Path, monkeypatch):
-    """Test that when a prapticonfig.md is provided, no fallback default responder is loaded"""
+    """Test that when a .prapticonfig.md is provided, no fallback default responder is loaded"""
 
     # clear XDG_CONFIG_HOME, set up empty mocked user home directory
     monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
@@ -279,7 +279,7 @@ def test_load_prapticonfig_md_inhibits_fallback_config(tmp_path: pathlib.Path, m
 
     # .prapticonfig.md
     temp_prapticonfig_md_path = tmp_path / ".prapticonfig.md"
-    temp_prapticonfig_md_path.write_text(PRAPTI_CONFIG_MD_NO_RESPONDER, encoding="utf-8")
+    temp_prapticonfig_md_path.write_text(PRAPTICONFIG_MD_NO_RESPONDER, encoding="utf-8")
 
     # minimal md input file
     temp_md_path = tmp_path / "test_load_prapticonfig_md_inhibits_fallback_config.md"
@@ -294,3 +294,120 @@ def test_load_prapticonfig_md_inhibits_fallback_config(tmp_path: pathlib.Path, m
 
     state: ExecutionState = test_exfil["state"]
     assert state.root_config.plugins.prapti.test.test_config.a_string == "Loaded from .prapticonfig.md"
+
+LOAD_ORDER_PARENT_PRAPTICONFIG_MD = """\
+% plugins.load prapti.test.test_responder
+% responder.new default prapti.test.test_responder
+% responders.default.a_string = "Loaded from ../.prapticonfig.md"
+"""
+LOAD_ORDER_CHILD_PRAPTICONFIG_MD = """\
+% plugins.load prapti.test.test_responder
+% responder.new default prapti.test.test_responder
+This `.prapticonfig.md` file should load second, and hence the following field value should be visible to the test:
+% responders.default.a_string = "Loaded from ./.prapticonfig.md"
+"""
+def test_prapticonfig_md_load_order(tmp_path: pathlib.Path, monkeypatch):
+    """Test that .prapticonfig.md files are loaded starting from the directory closest to the root, and working towards the directory containing the input file."""
+
+    # clear XDG_CONFIG_HOME, set up empty mocked user home directory
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+
+    mock_user_home = tmp_path / "mock_user_home"
+    mock_user_home.mkdir()
+    monkeypatch.setenv("HOME", str(mock_user_home))
+    def mock_home_func():
+        return mock_user_home
+    monkeypatch.setattr(pathlib.Path, "home", mock_home_func)
+
+    # leave mock user home empty. i.e. no user config
+
+    parent_path = tmp_path
+    child_path = tmp_path / "child"
+    child_path.mkdir()
+
+    # parent dir and child dir .prapticonfig.md
+    temp_parent_prapticonfig_md_path = parent_path / ".prapticonfig.md"
+    temp_parent_prapticonfig_md_path.write_text(LOAD_ORDER_PARENT_PRAPTICONFIG_MD, encoding="utf-8")
+    temp_child_prapticonfig_md_path = child_path / ".prapticonfig.md"
+    temp_child_prapticonfig_md_path.write_text(LOAD_ORDER_CHILD_PRAPTICONFIG_MD, encoding="utf-8")
+
+    # minimal md input file in child dir
+    temp_md_path = child_path / "test_prapticonfig_md.md"
+    temp_md_path.write_text(MINIMAL_PROMPT_MD, encoding="utf-8")
+
+    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+
+    import prapti.tool
+    test_exfil = {}
+    exit_status = prapti.tool.main(test_exfil=test_exfil)
+    assert exit_status == 0
+
+    state: ExecutionState = test_exfil["state"]
+
+    # check that two config files and one input file were loaded:
+    assert len([message for message in state.message_sequence if message.role == "_head"]) == 3
+    # check that closest .prapticonfig.md was loaded last
+    assert state.root_config.responders.default.a_string == "Loaded from ./.prapticonfig.md"
+
+CONFIG_ROOT_PARENT_PRAPTICONFIG_MD = """\
+This .prapticonfig.md should not be loaded
+% plugins.load prapti.test.test_responder
+% responder.new default prapti.test.test_responder
+% responders.default.a_string = "Loaded from ../.prapticonfig.md"
+# to test that this config is not loaded, we will test that the prapti.test.test_config plugin is not loaded
+% plugins.load prapti.test.test_config
+"""
+CONFIG_ROOT_CHILD_PRAPTICONFIG_MD_1 = """\
+% prapti.config_root = true
+% plugins.load prapti.test.test_responder
+% responder.new default prapti.test.test_responder
+% responders.default.a_string = "Loaded from ./.prapticonfig.md"
+"""
+CONFIG_ROOT_CHILD_PRAPTICONFIG_MD_2 = """\
+% config_root = true
+% plugins.load prapti.test.test_responder
+% responder.new default prapti.test.test_responder
+% responders.default.a_string = "Loaded from ./.prapticonfig.md"
+"""
+@pytest.mark.parametrize("root_prapticonfig_md", [CONFIG_ROOT_CHILD_PRAPTICONFIG_MD_1, CONFIG_ROOT_CHILD_PRAPTICONFIG_MD_2])
+def test_prapticonfig_md_config_root(tmp_path: pathlib.Path, monkeypatch, root_prapticonfig_md):
+    """Test that .prapticonfig.md file search terminates at the closest directory to the input file containing % config_root = true."""
+
+    # clear XDG_CONFIG_HOME, set up empty mocked user home directory
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+
+    mock_user_home = tmp_path / "mock_user_home"
+    mock_user_home.mkdir()
+    monkeypatch.setenv("HOME", str(mock_user_home))
+    def mock_home_func():
+        return mock_user_home
+    monkeypatch.setattr(pathlib.Path, "home", mock_home_func)
+
+    # leave mock user home empty. i.e. no user config
+
+    parent_path = tmp_path
+    child_path = tmp_path / "child"
+    child_path.mkdir()
+
+    # parent dir and child dir .prapticonfig.md
+    temp_parent_prapticonfig_md_path = parent_path / ".prapticonfig.md"
+    temp_parent_prapticonfig_md_path.write_text(CONFIG_ROOT_PARENT_PRAPTICONFIG_MD, encoding="utf-8")
+    temp_child_prapticonfig_md_path = child_path / ".prapticonfig.md"
+    temp_child_prapticonfig_md_path.write_text(root_prapticonfig_md, encoding="utf-8")
+
+    # minimal md input file in child dir
+    temp_md_path = child_path / "test_prapticonfig_md.md"
+    temp_md_path.write_text(MINIMAL_PROMPT_MD, encoding="utf-8")
+
+    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+
+    import prapti.tool
+    test_exfil = {}
+    exit_status = prapti.tool.main(test_exfil=test_exfil)
+    assert exit_status == 0
+
+    state: ExecutionState = test_exfil["state"]
+    # check that one config file and one input file were loaded:
+    assert len([message for message in state.message_sequence if message.role == "_head"]) == 2
+    assert state.root_config.responders.default.a_string == "Loaded from ./.prapticonfig.md" # check that child config was loaded last
+    assert not hasattr(state.root_config.plugins.prapti.test, "test_config") # check that test_config plugin was not loaded i.e. parent config was not loaded
