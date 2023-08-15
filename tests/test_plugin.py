@@ -27,7 +27,7 @@ LOAD_PlUGIN_PROMPT = """\
 
 Hello
 """
-def test_load_plugin(tmp_path, monkeypatch):
+def test_load_plugin(tmp_path, no_user_config, monkeypatch):
     """Test loading a plugin"""
     temp_md_path = tmp_path / "test_load_plugin_temp.md"
     temp_md_path.write_text(LOAD_PlUGIN_PROMPT, encoding="utf-8")
@@ -61,7 +61,7 @@ SET_PLUGIN_CONFIG_FIELDS_PROMPT = """\
 
 Hello
 """
-def test_set_plugin_config_fields(tmp_path, monkeypatch):
+def test_set_plugin_config_fields(tmp_path, no_user_config, monkeypatch):
     """Test setting plugin config fields from markdown"""
     temp_md_path = tmp_path / "test_set_plugin_config_fields_temp.md"
     temp_md_path.write_text(SET_PLUGIN_CONFIG_FIELDS_PROMPT, encoding="utf-8")
@@ -89,7 +89,7 @@ NEW_RESPONDER_PROMPT = """\
 
 Hello
 """
-def test_new_responder(tmp_path, monkeypatch):
+def test_new_responder(tmp_path, no_user_config, monkeypatch):
     """Test creating a responder"""
     temp_md_path = tmp_path / "test_new_responder_temp.md"
     temp_md_path.write_text(NEW_RESPONDER_PROMPT, encoding="utf-8")
@@ -123,7 +123,7 @@ TEST_SET_RESPONDER_CONFIG_FIELDS_PROMPT = """\
 
 Hello
 """
-def test_set_responder_config_fields(tmp_path, monkeypatch):
+def test_set_responder_config_fields(tmp_path, no_user_config, monkeypatch):
     """Test setting responder config fields from markdown"""
     temp_md_path = tmp_path / "test_set_plugin_config_fields_temp.md"
     temp_md_path.write_text(TEST_SET_RESPONDER_CONFIG_FIELDS_PROMPT, encoding="utf-8")
@@ -155,7 +155,7 @@ TEST_SET_LATE_BOUND_VARS_PROMPT = """\
 Hello
 """
 # ^^^ tests both qualified (vars.) and unqualified variable assignment
-def test_set_late_bound_vars(tmp_path, monkeypatch):
+def test_set_late_bound_vars(tmp_path, no_user_config, monkeypatch):
     """Test setting a late bound vars and checking that they are used in responder"""
     temp_md_path = tmp_path / "test_set_late_bound_vars_temp.md"
     temp_md_path.write_text(TEST_SET_LATE_BOUND_VARS_PROMPT, encoding="utf-8")
@@ -191,7 +191,7 @@ TEST_SET_FIELD_OF_NONEXISTANT_PLUGIN = """\
 
 Hello
 """
-def test_set_field_of_nonexistant_plugin(tmp_path, monkeypatch, caplog):
+def test_set_field_of_nonexistant_plugin(tmp_path, no_user_config, monkeypatch, caplog):
     """Test that we get an error when setting a field of a non-existant plugin"""
     temp_md_path = tmp_path / "test_set_field_of_nonexistant_plugin_temp.md"
     temp_md_path.write_text(TEST_SET_FIELD_OF_NONEXISTANT_PLUGIN, encoding="utf-8")
@@ -214,7 +214,7 @@ TEST_SET_NONEXISTANT_PLUGIN_FIELD = """\
 
 Hello
 """
-def test_set_nonexistant_plugin_field(tmp_path, monkeypatch, caplog):
+def test_set_nonexistant_plugin_field(tmp_path, no_user_config, monkeypatch, caplog):
     """Test that we get an error when setting a non-existant field of plugin configuration"""
     temp_md_path = tmp_path / "test_set_nonexistant_plugin_field_temp.md"
     temp_md_path.write_text(TEST_SET_NONEXISTANT_PLUGIN_FIELD, encoding="utf-8")
@@ -237,7 +237,7 @@ TEST_SET_PLUGIN_FIELD_WITH_INVALID_VALUE = """\
 
 Hello
 """
-def test_set_plugin_field_with_invalid_value(tmp_path, monkeypatch, caplog):
+def test_set_plugin_field_with_invalid_value(tmp_path, no_user_config, monkeypatch, caplog):
     """Test that we get a validation error when setting a field to an invalid value (assign non-numeric string to int field)"""
     temp_md_path = tmp_path / "test_set_plugin_field_with_invalid_value_temp.md"
     temp_md_path.write_text(TEST_SET_PLUGIN_FIELD_WITH_INVALID_VALUE, encoding="utf-8")
