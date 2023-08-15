@@ -85,7 +85,7 @@ def _interpret_command(command_text: str, is_final_message: bool, source_loc: So
         state.log.error("unknown-command", f"couldn't interpret command '{command_text}'", source_loc)
     return result
 
-def interpret_commands(message_sequence: list[Message], state: ExecutionState) -> None:
+def interpret_commands(message_sequence: list[Message], state: ExecutionState, is_final_sequence: bool=False) -> None:
     """"for each enabled message in the sequence, interpret enabled commands. store command results in command.result field
     NOTE: the possible side effects of interpreting commands are:
     - changes to the configuration tree
@@ -93,7 +93,7 @@ def interpret_commands(message_sequence: list[Message], state: ExecutionState) -
     - generation of command/action results, which are stored in the command.result field
     this step does not modify the message sequence
     """
-    final_message = message_sequence[-1] # FIXME: this won't work as intened if we invoke interpret_commands multiple times e.g. for config files
+    final_message = message_sequence[-1] if is_final_sequence else None
     for message in message_sequence:
         if message.is_enabled:
             is_final_message = message is final_message

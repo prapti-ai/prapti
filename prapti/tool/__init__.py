@@ -202,7 +202,7 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
             return 0
 
         input_messages: list[Message] = parse_messages(lines, state.input_file_path)
-        interpret_commands(input_messages, state)
+        interpret_commands(input_messages, state, is_final_sequence=True)
         state.message_sequence += input_messages
 
         emitted_messages = flatten_message_content(state.message_sequence)
@@ -256,7 +256,7 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
                 # followup: feed back responses to input, allow hooks to continue the conversation
                 state.responses = []
                 # we haven't parsed commands out, but we want to give hooks an opportunity to run:
-                interpret_commands(responses, state)
+                interpret_commands(responses, state, is_final_sequence=True)
                 flatten_message_content(responses)
                 state.message_sequence += responses
 
@@ -266,7 +266,7 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
                 message_sequence: list[Message]|None
                 continue_, message_sequence = core_state.hooks_distributor.on_followup()
                 if message_sequence:
-                    interpret_commands(message_sequence, state)
+                    interpret_commands(message_sequence, state, is_final_sequence=True)
                     flatten_message_content(message_sequence)
                     state.message_sequence += message_sequence
                 if continue_:
