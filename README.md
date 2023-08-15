@@ -22,7 +22,7 @@ Prapti requires Python 3.10 or newer.
 Installation involves the following required steps:
 
 1. Install the `prapti` command line tool
-2. Set up your OpenAI API key (or configure a local LLM: see docs)
+2. Set up your OpenAI API key (or configure a local LLM: [see docs](docs/local_llms.md))
 3. Check that the `prapti` tool runs manually in your terminal
 4. Set up a keybinding to run `prapti` in your editor
 
@@ -39,7 +39,7 @@ pip install git+https://github.com/prapti-ai/prapti
 We recommend running prapti in a Python virtual environment such as
 [venv](https://docs.python.org/3/tutorial/venv.html).
 
-### 2. Set up your OpenAI API key (or [configure a local LLM](docs/local_llms.md))
+### 2. Set up your OpenAI API key (or configure a local LLM)
 
 ```
 export OPENAI_API_KEY=your-key-goes-here
