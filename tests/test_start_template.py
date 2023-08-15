@@ -3,25 +3,24 @@
     The start template is text that the prapti tool responds with when run on an empty input file.
 """
 import pathlib
+import pytest
+
+@pytest.fixture(scope="function")
+def mock_prapti_config_home(mock_user_home: pathlib.Path, monkeypatch) -> pathlib.Path:
+    # clear XDG_CONFIG_HOME, set up empty mocked user home directory
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+
+    # add prapti user config dir $HOME/.config/prapti
+    result = mock_user_home / ".config" / "prapti"
+    result.mkdir(parents=True)
+    return result
 
 INPUT_DIR_PRAPTISTART_MD = """\
 ### user:
 loaded ./praptistart.md
 """
-def test_load_praptistart_md_in_input_file_dir(tmp_path: pathlib.Path, monkeypatch):
+def test_load_praptistart_md_in_input_file_dir(tmp_path: pathlib.Path, no_user_config, monkeypatch):
     """Test loading `.praptistart.md` from input file dir"""
-
-    # clear XDG_CONFIG_HOME, set up empty mocked user home directory
-    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
-
-    mock_user_home = tmp_path / "mock_user_home"
-    mock_user_home.mkdir()
-    monkeypatch.setenv("HOME", str(mock_user_home))
-    def mock_home_func():
-        return mock_user_home
-    monkeypatch.setattr(pathlib.Path, "home", mock_home_func)
-
-    # leave mock user home empty. i.e. no user config
 
     # .praptistart.md
     praptistart_md_path = tmp_path / ".praptistart.md"
@@ -45,20 +44,8 @@ PARENT_OF_INPUT_DIR_PRAPTISTART_MD = """\
 ### user:
 loaded ../praptistart.md
 """
-def test_load_praptistart_md_one_dir_up_from_input_file(tmp_path: pathlib.Path, monkeypatch):
+def test_load_praptistart_md_one_dir_up_from_input_file(tmp_path: pathlib.Path, no_user_config, monkeypatch):
     """Test loading `.praptistart.md` from config root one dir up from input file"""
-
-    # clear XDG_CONFIG_HOME, set up empty mocked user home directory
-    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
-
-    mock_user_home = tmp_path / "mock_user_home"
-    mock_user_home.mkdir()
-    monkeypatch.setenv("HOME", str(mock_user_home))
-    def mock_home_func():
-        return mock_user_home
-    monkeypatch.setattr(pathlib.Path, "home", mock_home_func)
-
-    # leave mock user home empty. i.e. no user config
 
     parent_path = tmp_path
     child_path = tmp_path / "child"
@@ -86,25 +73,11 @@ CONFIG_HOME_START_MD = """\
 ### user:
 loaded ~/.config/prapti/start.md
 """
-def test_load_start_md_from_user_config_dir(tmp_path: pathlib.Path, monkeypatch):
+def test_load_start_md_from_user_config_dir(tmp_path: pathlib.Path, mock_prapti_config_home: pathlib.Path, monkeypatch):
     """Test loading `start.md` from user home config"""
 
-    # clear XDG_CONFIG_HOME, set up empty mocked user home directory
-    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
-
-    mock_user_home = tmp_path / "mock_user_home"
-    mock_user_home.mkdir()
-    monkeypatch.setenv("HOME", str(mock_user_home))
-    def mock_home_func():
-        return mock_user_home
-    monkeypatch.setattr(pathlib.Path, "home", mock_home_func)
-
-    # add dir HOME/.config/prapti
-    prapti_config_home = mock_user_home / ".config" / "prapti"
-    prapti_config_home.mkdir(parents=True)
-
     # start.md
-    start_md_path = prapti_config_home / "start.md"
+    start_md_path = mock_prapti_config_home / "start.md"
     start_md_path.write_text(CONFIG_HOME_START_MD, encoding="utf-8")
 
     # empty md input file
@@ -121,25 +94,11 @@ def test_load_start_md_from_user_config_dir(tmp_path: pathlib.Path, monkeypatch)
     output_file_data = temp_md_path.read_text(encoding="utf-8")
     assert "loaded ~/.config/prapti/start.md" in output_file_data
 
-def test_load_praptistart_md_nearest_input_file(tmp_path: pathlib.Path, monkeypatch):
+def test_load_praptistart_md_nearest_input_file(tmp_path: pathlib.Path, mock_prapti_config_home: pathlib.Path, monkeypatch):
     """Test putting start files in all three previous locations and check that the one closest to the input file is loaded"""
 
-    # clear XDG_CONFIG_HOME, set up empty mocked user home directory
-    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
-
-    mock_user_home = tmp_path / "mock_user_home"
-    mock_user_home.mkdir()
-    monkeypatch.setenv("HOME", str(mock_user_home))
-    def mock_home_func():
-        return mock_user_home
-    monkeypatch.setattr(pathlib.Path, "home", mock_home_func)
-
-    # add dir HOME/.config/prapti
-    prapti_config_home = mock_user_home / ".config" / "prapti"
-    prapti_config_home.mkdir(parents=True)
-
     # start.md
-    start_md_path = prapti_config_home / "start.md"
+    start_md_path = mock_prapti_config_home / "start.md"
     start_md_path.write_text(CONFIG_HOME_START_MD, encoding="utf-8")
 
     parent_path = tmp_path
