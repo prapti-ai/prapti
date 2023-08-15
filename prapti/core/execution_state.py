@@ -5,7 +5,6 @@ import pathlib
 from .logger import DiagnosticsLogger
 from .configuration import RootConfiguration
 from .command_message import Message
-from .responder import ResponderContext
 
 @dataclass
 class ExecutionState:
@@ -21,8 +20,6 @@ class ExecutionState:
     root_config: RootConfiguration = field(default_factory=RootConfiguration) # root of the configuration tree
     message_sequence: list[Message] = field(default_factory=list)
     responses: list[Message] = field(default_factory=list)
-
-    selected_responder_context: ResponderContext|None = None
 
     private_core_state: Any|None = None # private to core. use get_private_core_state() for typesafe access
     test_exfil: dict = field(default_factory=dict) # conduit for test inspection

@@ -151,6 +151,14 @@ def lookup_active_responder(state: ExecutionState) -> tuple[str, ResponderContex
     responder_name = core_state.hooks_distributor.on_lookup_active_responder(responder_name)
     return (responder_name, core_state.responder_contexts.get(responder_name, None))
 
+def delegate_generate_responses(state: ExecutionState, responder_name: str, input_: list[Message]) -> list[Message]:
+    core_state = get_private_core_state(state)
+    delegate_responder_context: ResponderContext|None = core_state.responder_contexts.get(responder_name, None)
+    if delegate_responder_context is None:
+        state.log.error("delegation-to-nonexistant-responder", "could not delegate to responder '{responder_name}'. responder does not exist.")
+        return []
+    return delegate_responder_context.responder.generate_responses(input_, delegate_responder_context)
+
 @builtin_actions.add_action("prapti.responder.new")
 def responder_new(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
     """Create a new responder"""
