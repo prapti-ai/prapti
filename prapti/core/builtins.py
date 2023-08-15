@@ -10,7 +10,7 @@ import pydantic
 
 from ._core_execution_state import get_private_core_state
 from .execution_state import ExecutionState
-from .configuration import EmptyPluginConfiguration, EmptyResponderConfiguration, RootConfiguration, VarRef, VarEntry, NotSet, resolve_var_ref, resolve_var_ref_field_assignment, setup_newly_constructed_config
+from .configuration import EmptyPluginConfiguration, EmptyResponderConfiguration, RootConfiguration, VarRef, VarEntry, NotSet, resolve_var_ref, resolve_var_ref_field_assignment, setup_newly_constructed_config, get_subobject
 from .command_message import Message
 from .action import ActionNamespace, ActionContext
 from .responder import ResponderContext
@@ -159,7 +159,7 @@ def responder_new(name: str, raw_args: str, context: ActionContext) -> None|str|
     load_plugin_by_name(plugin_name, context.source_loc, context.state)
     if plugin := core_state.loaded_plugins.get(plugin_name, None):
         if PluginCapabilities.RESPONDER in plugin.capabilities:
-            plugin_config = getattr(context.root_config.plugins, plugin_name, None)
+            plugin_config = get_subobject(context.root_config.plugins, plugin_name, None)
             plugin_context = PluginContext(
                     state=context.state, plugin_name=plugin_name,
                     root_config=context.root_config, plugin_config=plugin_config, log=context.log)
