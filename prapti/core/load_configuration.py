@@ -1,8 +1,8 @@
 """
-    Find and load configurations files:
-    - specified configuration file
-    - user config.md from somewhere in the user's home directory
-    - .prapticonfig.md from directory containing input file, and parent directories
+    Find and load configuration files:
+    - at specified location
+    - `config.md` at defined locations within the user's home directory
+    - `.prapticonfig.md` from directory containing input file, and parent directories
 """
 import os
 import pathlib
@@ -81,8 +81,8 @@ def locate_user_prapti_config_dir(log: DiagnosticsLogger) -> pathlib.Path | None
         return None
 
 def locate_user_config_file(prapti_user_config_dir: pathlib.Path, log: DiagnosticsLogger) -> pathlib.Path | None:
-    """Compute the location of the user's prapti config.md file.
-    The config.md file must be located in the user config directory determined by
+    """Compute the location of the user's prapti `config.md` file.
+    The `config.md` file must be located in the user config directory determined by
     `locate_user_prapti_config_dir()`
     """
     result = prapti_user_config_dir / "config.md"
@@ -140,11 +140,11 @@ def execute_in_tree_prapticonfig_md_files(prapticonfig_mds: list[tuple[pathlib.P
 
 def default_load_config_files(state: ExecutionState):
     """Default configuration loading. Load configuration from:
-    - $XDG_CONFIG_HOME/prapti/config.md or ~/.config/prapti/config.md or  ~/.config/prapti/config.md
-    - then .prapticonfig.md in containing directories up to when %config_root = true
+    - `$XDG_CONFIG_HOME/prapti/config.md` or `~/.config/prapti/config.md` or  `~/.config/prapti/config.md`
+    - then `.prapticonfig.md` in containing directories up to when %config_root = true
     - if no config files found, fallback to FALLBACK_CONFIG_FILE_DATA (just so that we work out of the box)
 
-    Stores configuration directory paths in state.user_prapti_config_dir and state.prapticonfig_dirs
+    Stores configuration directory paths in `state.user_prapti_config_dir` and `state.prapticonfig_dirs`
     """
     found_config_file = False
 
