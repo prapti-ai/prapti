@@ -1,9 +1,7 @@
 % plugins.load openai.chat
 % plugins.load prapti.experimental.agents
 
-% responder.new default openai.chat
-% responders.default.temperature = 0.2
-//% responders.default.model = "gpt-3.5-turbo"
+% responder.new default prapti.experimental.agents
 
 ### @system/Alice:
 
@@ -24,8 +22,52 @@ You are Alice, a gen-Xer from Sydney, Australia. We are conducting a simple psyc
 You are Bob, a millennial from San Diego, USA. We are conducting a simple psychological test. Please follow the instructions of our facilitator, Ross.
 
 ### @user/Ross:
+
+Hello, my name is Ross. What's your name?
+
+% !agents.ask Alice
+
+### @assistant/Alice:
+
+Hello Ross, my name is Alice.
+
+### @user/Ross:
+
+and your name?
+
+% !agents.ask Bob
+
+### @assistant/Bob:
+
+Hello Ross, my name is Bob.
+
+### @user/Ross:
+
 % agents.set_group Alice Bob
 
-Hello Alice and Bob. Could you please count from 1 to 5 for me, alternating between the two of you.
+OK Alice and Bob. Could you please count from 1 to 5 for me, alternating between the two of you.
 
 % !discuss 5 Alice Bob
+
+### @assistant/Alice:
+
+Sure, I'll start. 1.
+
+### @assistant/Bob:
+
+2.
+
+### @assistant/Alice:
+
+3.
+
+### @assistant/Bob:
+
+4.
+
+### @assistant/Alice:
+
+5.
+
+### @user/Ross:
+
