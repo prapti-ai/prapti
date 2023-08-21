@@ -48,6 +48,15 @@ def add_logging_level(level: int, name: str, lower_bound: int, upper_bound: int)
 HINT: int = add_logging_level(25, "HINT", logging.INFO, logging.WARNING) # midway between INFO and WARNING
 DETAIL: int = add_logging_level(15, "DETAIL", logging.DEBUG, logging.INFO) # midway between DEBUG and INFO
 
+log_levels = {
+    'CRITICAL': logging.CRITICAL,
+    'ERROR': logging.ERROR,
+    'WARNING': logging.WARNING,
+    'HINT': HINT,
+    'INFO': logging.INFO,
+    'DETAIL': DETAIL,
+    'DEBUG': logging.DEBUG,
+}
 
 class DiagnosticsLogger:
     """Ergonomic facade for logging compiler-style diagnostic messages.
