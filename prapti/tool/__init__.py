@@ -7,7 +7,7 @@ from typing import Sequence, TextIO
 from dataclasses import dataclass
 
 from ..__init__ import __version__
-from ..core.logger import create_diagnostics_logger
+from ..core.logger import create_diagnostics_logger, log_levels
 from ..core._core_execution_state import CoreExecutionState
 from ..core.execution_state import ExecutionState
 from ..core.chat_markdown_parser import parse_messages
@@ -29,6 +29,10 @@ def make_argument_parser() -> argparse.ArgumentParser:
     result.add_argument("--strict", help="fail if errors are encountered, do not attempt error recovery", action="store_true")
     result.add_argument("--no-default-config", help="disable default config file search", action="store_true")
     result.add_argument("--config-file", help="specify additional config file(s)", required=False, default=[], action="append")
+
+    log_level_choices = [level.lower() for level in log_levels]
+    result.add_argument("--log-level", help="specify the minimum level of log messages to be printed", choices=log_level_choices, required=False, default="info")
+
     # Positional argument for the filename
     result.add_argument("filename", help="the current markdown chat file")
     return result
@@ -173,8 +177,13 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
 
     command_line_args = argument_parser.parse_args(args=argv) # parse command line args, uses sys.argv if None is passed
 
+    log_level = log_levels.get(command_line_args.log_level.upper(), None)
+    if not log_level:
+        print(f"error: {command_line_args.log_level} is not a valid log level")
+        return 1
+
     # construct execution state
-    state = ExecutionState(log=create_diagnostics_logger(), input_file_path=pathlib.Path(command_line_args.filename))
+    state = ExecutionState(log=create_diagnostics_logger(initial_level=log_level), input_file_path=pathlib.Path(command_line_args.filename))
     core_state = CoreExecutionState()
     state.private_core_state = core_state
     core_state.actions.merge(builtin_actions)
