@@ -29,7 +29,7 @@ def load_config_file(config_path: pathlib.Path, state: ExecutionState) -> bool:
     loads without error.
     """
     if config_path.is_file():
-        state.log.detail("loading-config", "loading configuration file", config_path)
+        state.log.info("loading-config", "loading configuration file", config_path)
         try:
             config_file_lines = config_path.read_text(encoding="utf-8").splitlines(keepends=True)
             parse_messages_and_interpret_commands(config_file_lines, config_path, state)
@@ -130,7 +130,7 @@ def execute_in_tree_prapticonfig_md_files(prapticonfig_mds: list[tuple[pathlib.P
     for config_path, message_sequence in reversed(prapticonfig_mds):
         if message_sequence:
             try:
-                state.log.detail("loading-in-tree-config", "loading configuration file", config_path)
+                state.log.info("loading-in-tree-config", "loading configuration file", config_path)
                 interpret_commands(message_sequence, state)
                 state.message_sequence += message_sequence
                 state.root_config.prapti.config_root = False
@@ -162,5 +162,5 @@ def default_load_config_files(state: ExecutionState):
 
     # if no config file is present, use fallback config
     if not found_config_file:
-        state.log.detail("loading-fallback-config", "loading fallback configuration", state.input_file_path)
+        state.log.info("loading-fallback-config", "loading fallback configuration", state.input_file_path)
         parse_messages_and_interpret_commands(FALLBACK_CONFIG_FILE_DATA.splitlines(keepends=True), pathlib.Path("<fallback-config>"), state)

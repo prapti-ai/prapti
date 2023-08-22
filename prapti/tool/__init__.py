@@ -23,7 +23,7 @@ argument_parser = None
 
 def make_argument_parser() -> argparse.ArgumentParser:
     # create and initialize an ArgumentParser
-    result = argparse.ArgumentParser(prog="prapti", description="Prapti markdown chat")
+    result = argparse.ArgumentParser(prog="prapti", description="Prapti markdown conversations")
     result.add_argument('--version', action='version', version=f"%(prog)s {__version__}")
     result.add_argument("--dry-run", help="prepare the API request then bail", action="store_true")
     result.add_argument("--strict", help="fail if errors are encountered, do not attempt error recovery", action="store_true")
@@ -34,7 +34,7 @@ def make_argument_parser() -> argparse.ArgumentParser:
     result.add_argument("--log-level", help="specify the minimum level of log messages to be printed", choices=log_level_choices, required=False, default="info")
 
     # Positional argument for the filename
-    result.add_argument("filename", help="the current markdown chat file")
+    result.add_argument("filename", help="the current markdown conversation file")
     return result
 
 # message sequence helpers ---------------------------------------------------
@@ -202,7 +202,7 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
 
     # process input file, generate response
     with open(state.input_file_path, "rt+", encoding="utf-8") as file:
-        state.log.detail("loading-input", "loading input file", state.input_file_path)
+        state.log.info("loading-input", "loading input file", state.input_file_path)
         lines = file.readlines()
         # early-out if the input file is effectively empty
         if not lines or all(not line.strip() for line in lines): # if file is effectively empty
@@ -243,6 +243,8 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
             state.log.error("empty-final-prompt", "final prompt is empty. write something.", final_prompt_message.source_loc)
             return 0
 
+        state.log.info("generating-responses", "generating response(s). please wait...", state.input_file_path)
+
         # generate responses
         responder_name, responder_context = lookup_active_responder(state)
         if not responder_context:
@@ -259,6 +261,8 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
             output_file.flush()
             output_file.close() # ensure flush and close prior to calling on_response_completed
             core_state.hooks_distributor.on_response_completed()
+
+            state.log.info("generating-responses-done", "done.", state.input_file_path)
         else:
             state.log.error("no-response", "no response generated, sorry.", state.input_file_path)
 
