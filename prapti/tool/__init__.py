@@ -233,14 +233,14 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
         final_prompt_message = find_final_prompt_message(state.message_sequence)
         if not final_prompt_message:
             # early-out if no viable prompt message supplied
-            state.log.error("absent-prompt", "no non-hidden non-disabled messages found. write something.", state.input_file_path)
+            state.log.info("absent-prompt", "no non-hidden non-disabled messages found. write something.", state.input_file_path)
             output_file.write_message(user_response_prompt_message)
             return 0
 
         # early-out if there is a final prompt, but it does not contain any text
         # (i.e. assume that the user triggered execution before typing their question)
         if final_prompt_message.content_is_empty():
-            state.log.error("empty-final-prompt", "final prompt is empty. write something.", final_prompt_message.source_loc)
+            state.log.info("empty-final-prompt", "final prompt is empty. write something.", final_prompt_message.source_loc)
             return 0
 
         state.log.info("generating-responses", "generating response(s). please wait...", state.input_file_path)
