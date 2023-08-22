@@ -32,7 +32,7 @@ def test_load_plugin(tmp_path, no_user_config, monkeypatch):
     temp_md_path = tmp_path / "test_load_plugin_temp.md"
     temp_md_path.write_text(LOAD_PlUGIN_PROMPT, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -66,7 +66,7 @@ def test_set_plugin_config_fields(tmp_path, no_user_config, monkeypatch):
     temp_md_path = tmp_path / "test_set_plugin_config_fields_temp.md"
     temp_md_path.write_text(SET_PLUGIN_CONFIG_FIELDS_PROMPT, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -94,7 +94,7 @@ def test_new_responder(tmp_path, no_user_config, monkeypatch):
     temp_md_path = tmp_path / "test_new_responder_temp.md"
     temp_md_path.write_text(NEW_RESPONDER_PROMPT, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", "--no-default-config", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", "--no-default-config", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -128,7 +128,7 @@ def test_set_responder_config_fields(tmp_path, no_user_config, monkeypatch):
     temp_md_path = tmp_path / "test_set_plugin_config_fields_temp.md"
     temp_md_path.write_text(TEST_SET_RESPONDER_CONFIG_FIELDS_PROMPT, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", "--no-default-config", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", "--no-default-config", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -161,7 +161,7 @@ def test_set_late_bound_vars_plugin_config(tmp_path, no_user_config, monkeypatch
     temp_md_path = tmp_path / "test_set_late_bound_vars_temp.md"
     temp_md_path.write_text(TEST_SET_LATE_BOUND_VARS_PLUGIN_PROMPT, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", "--no-default-config", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", "--no-default-config", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -189,7 +189,7 @@ def test_set_late_bound_vars_responder_config(tmp_path, no_user_config, monkeypa
     temp_md_path = tmp_path / "test_set_late_bound_vars_temp.md"
     temp_md_path.write_text(TEST_SET_LATE_BOUND_VARS_RESPONDER_PROMPT, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", "--no-default-config", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", "--no-default-config", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -225,7 +225,7 @@ def test_set_field_of_nonexistant_plugin(tmp_path, no_user_config, monkeypatch, 
     temp_md_path = tmp_path / "test_set_field_of_nonexistant_plugin_temp.md"
     temp_md_path.write_text(TEST_SET_FIELD_OF_NONEXISTANT_PLUGIN, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", "--no-default-config", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", "--no-default-config", str(temp_md_path)])
 
     import prapti.tool
     exit_status = prapti.tool.main()
@@ -248,7 +248,7 @@ def test_set_nonexistant_plugin_field(tmp_path, no_user_config, monkeypatch, cap
     temp_md_path = tmp_path / "test_set_nonexistant_plugin_field_temp.md"
     temp_md_path.write_text(TEST_SET_NONEXISTANT_PLUGIN_FIELD, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", "--no-default-config", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", "--no-default-config", str(temp_md_path)])
 
     import prapti.tool
     exit_status = prapti.tool.main()
@@ -271,7 +271,7 @@ def test_set_plugin_field_with_invalid_value(tmp_path, no_user_config, monkeypat
     temp_md_path = tmp_path / "test_set_plugin_field_with_invalid_value_temp.md"
     temp_md_path.write_text(TEST_SET_PLUGIN_FIELD_WITH_INVALID_VALUE, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", "--no-default-config", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", "--no-default-config", str(temp_md_path)])
 
     import prapti.tool
     exit_status = prapti.tool.main()

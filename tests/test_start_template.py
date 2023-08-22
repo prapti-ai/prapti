@@ -30,7 +30,7 @@ def test_load_praptistart_md_in_input_file_dir(tmp_path: pathlib.Path, no_user_c
     temp_md_path = tmp_path / "test_load_praptistart_md_in_input_file_dir.md"
     temp_md_path.write_text("", encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -59,7 +59,7 @@ def test_load_praptistart_md_one_dir_up_from_input_file(tmp_path: pathlib.Path, 
     temp_md_path = child_path / "test_load_praptistart_md_one_dir_up_from_input_file.md"
     temp_md_path.write_text("", encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -84,7 +84,7 @@ def test_load_start_md_from_user_config_dir(tmp_path: pathlib.Path, mock_prapti_
     temp_md_path = tmp_path / "test_load_start_md_from_user_config_dir.md"
     temp_md_path.write_text("", encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -116,7 +116,7 @@ def test_load_praptistart_md_nearest_input_file(tmp_path: pathlib.Path, mock_pra
     temp_md_path = child_path / "test_load_praptistart_md_nearest_input_file.md"
     temp_md_path.write_text("", encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}

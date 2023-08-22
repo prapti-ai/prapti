@@ -26,7 +26,7 @@ def make_argument_parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(prog="prapti", description="Prapti markdown conversations")
     result.add_argument('--version', action='version', version=f"%(prog)s {__version__}")
     result.add_argument("--dry-run", help="prepare the API request then bail", action="store_true")
-    result.add_argument("--strict", help="fail if errors are encountered, do not attempt error recovery", action="store_true")
+    result.add_argument("--halt-on-error", help="halt if errors are encountered, do not attempt error recovery", action="store_true")
     result.add_argument("--no-default-config", help="disable default config file search", action="store_true")
     result.add_argument("--config-file", help="specify additional config file(s)", required=False, default=[], action="append")
 
@@ -188,7 +188,7 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
     state.private_core_state = core_state
     core_state.actions.merge(builtin_actions)
     state.root_config.prapti.dry_run = command_line_args.dry_run
-    state.root_config.prapti.strict = command_line_args.strict
+    state.root_config.prapti.halt_on_error = command_line_args.halt_on_error
     if test_exfil is not None:
         state.test_exfil = test_exfil
     state.test_exfil["state"] = state
@@ -242,6 +242,10 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
         if final_prompt_message.content_is_empty():
             state.log.info("empty-final-prompt", "final prompt is empty. write something.", final_prompt_message.source_loc)
             return 0
+
+        if state.root_config.prapti.halt_on_error and (state.log.critical_count() > 0 or state.log.error_count() > 0):
+            state.log.error("error-halting", "halting due to errors.", state.input_file_path)
+            return 1
 
         state.log.info("generating-responses", "generating response(s). please wait...", state.input_file_path)
 
