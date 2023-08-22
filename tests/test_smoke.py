@@ -5,14 +5,12 @@
 def test_dry_run_tool(temp_markdown_file_path, no_user_config, monkeypatch):
     """Dry-run prapti tool against every markdown file in the repository
     and check for expected exit status. This should catch basic crashes.
-    By using the `--strict` option we aim to catch other errors,
-    as these will be cause a failure exit status.
 
     Note that if a test is expected to fail (i.e. it has the _fail suffix),
     it may fail for the expected reason, or for an unrelated reason. This test
     can not tell the difference.
     """
-    monkeypatch.setattr("sys.argv", ["prapti", "--dry-run", "--strict", str(temp_markdown_file_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--dry-run", "--halt-on-error", str(temp_markdown_file_path)])
 
     import prapti.tool
     exit_status = prapti.tool.main()
@@ -35,7 +33,7 @@ def test_live_tool(tmp_path, no_user_config, monkeypatch):
     temp_md_path = tmp_path / "test_live_tool_temp.md"
     temp_md_path.write_text(CAPITAL_CITY_OF_ENGLAND_PROMPT, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", str(temp_md_path)])
 
     import prapti.tool
     exit_status = prapti.tool.main()

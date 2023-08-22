@@ -21,7 +21,7 @@ class PraptiConfiguration(BaseModel):
 
     config_root: bool = Field(default=False, description="Halt in-tree configuration file search once set to `true`.")
     dry_run: bool = Field(default=False, description="Simulate LLM responses. Disable plugin-specific side effects.")
-    strict: bool = Field(default=False, description="Halt if errors are encountered. If `strict` is `false`, errors will be reported but prapti will try to continue whenever possible).")
+    halt_on_error: bool = Field(default=False, description="Halt if errors are encountered. If `halt_on_error` is `false`, errors will be reported but prapti will try to continue whenever possible).")
 
     responder_stack: list[str] = Field(default_factory=list)
 

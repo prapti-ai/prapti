@@ -34,7 +34,7 @@ def test_no_default_config(tmp_path: pathlib.Path, mock_user_home: pathlib.Path,
     temp_md_path = tmp_path / "test_no_default_config.md"
     temp_md_path.write_text(MINIMAL_PROMPT_MD, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", "--no-default-config", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", "--no-default-config", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -51,7 +51,7 @@ def test_fallback_config(tmp_path: pathlib.Path, no_user_config, monkeypatch):
     temp_md_path = tmp_path / "test_fallback_config.md"
     temp_md_path.write_text(MINIMAL_PROMPT_MD, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -81,7 +81,7 @@ def test_load_user_config_from_xdg_config_home(tmp_path: pathlib.Path, mock_user
     temp_md_path = tmp_path / "test_load_user_config_from_xdg_config_home.md"
     temp_md_path.write_text(MINIMAL_PROMPT_MD, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -114,7 +114,7 @@ def test_load_user_config_from_default_xdg_config_home(tmp_path: pathlib.Path, m
     temp_md_path = tmp_path / "test_load_user_config_from_default_xdg_config_home.md"
     temp_md_path.write_text(MINIMAL_PROMPT_MD, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -144,7 +144,7 @@ def test_load_user_config_from_legacy_config_home(tmp_path: pathlib.Path, mock_u
     temp_md_path = tmp_path / "test_load_user_config_from_legacy_config_home.md"
     temp_md_path.write_text(MINIMAL_PROMPT_MD, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -171,7 +171,7 @@ def test_load_user_config_inhibits_fallback_config(tmp_path: pathlib.Path, tmp_x
     temp_md_path = tmp_path / "test_load_user_config_inhibits_fallback_config.md"
     temp_md_path.write_text(MINIMAL_PROMPT_MD, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -197,7 +197,7 @@ def test_prapticonfig_md(tmp_path: pathlib.Path, no_user_config, monkeypatch):
     temp_md_path = tmp_path / "test_prapticonfig_md.md"
     temp_md_path.write_text(MINIMAL_PROMPT_MD, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -222,7 +222,7 @@ def test_load_prapticonfig_md_inhibits_fallback_config(tmp_path: pathlib.Path, n
     temp_md_path = tmp_path / "test_load_prapticonfig_md_inhibits_fallback_config.md"
     temp_md_path.write_text(MINIMAL_PROMPT_MD, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -260,7 +260,7 @@ def test_prapticonfig_md_load_order(tmp_path: pathlib.Path, no_user_config, monk
     temp_md_path = child_path / "test_prapticonfig_md.md"
     temp_md_path.write_text(MINIMAL_PROMPT_MD, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
@@ -312,7 +312,7 @@ def test_prapticonfig_md_config_root(tmp_path: pathlib.Path, no_user_config, mon
     temp_md_path = child_path / "test_prapticonfig_md.md"
     temp_md_path.write_text(MINIMAL_PROMPT_MD, encoding="utf-8")
 
-    monkeypatch.setattr("sys.argv", ["prapti", "--strict", "--dry-run", str(temp_md_path)])
+    monkeypatch.setattr("sys.argv", ["prapti", "--halt-on-error", "--dry-run", str(temp_md_path)])
 
     import prapti.tool
     test_exfil = {}
