@@ -179,7 +179,7 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
 
     log_level = log_levels.get(command_line_args.log_level.upper(), None)
     if not log_level:
-        print(f"error: {command_line_args.log_level} is not a valid log level")
+        print(f"error: '{command_line_args.log_level}' is not a valid log level")
         return 1
 
     # construct execution state
