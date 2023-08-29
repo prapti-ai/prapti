@@ -25,6 +25,9 @@ class Hooks:
     def on_plugin_loaded(self, context: HooksContext):
         pass
 
+    def on_generating_response(self, context: HooksContext):
+        pass
+
     def on_lookup_active_responder(self, responder_name: str, context: HooksContext) -> str:
         return responder_name
 
@@ -44,6 +47,10 @@ class HooksDistributor:
     def on_plugin_loaded(self):
         for context in self._hooks_contexts:
             context.hooks.on_plugin_loaded(context)
+
+    def on_generating_response(self):
+        for context in self._hooks_contexts:
+            context.hooks.on_generating_response(context)
 
     def on_lookup_active_responder(self, responder_name: str) -> str:
         for context in self._hooks_contexts:
