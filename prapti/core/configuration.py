@@ -5,11 +5,10 @@
 from dataclasses import dataclass, field
 from typing import Any, TypeVar, Callable
 from types import SimpleNamespace
-from collections import defaultdict
 import json
 import re
 
-from pydantic import BaseModel, Field, ConfigDict, PrivateAttr, ValidationError
+from pydantic import BaseModel, Field, ConfigDict, ValidationError
 
 from .logger import DiagnosticsLogger
 from .source_location import SourceLocation
@@ -76,10 +75,6 @@ class RootConfiguration(BaseModel):
 
     vars: Vars = Field(default_factory=Vars)
 
-    _var_ref_assignments : defaultdict[int, dict[str, VarRef]] = PrivateAttr(default_factory=lambda: defaultdict(dict))
-    # ^^^ NOTE: defaultdict behavior is that _var_ref_assignments[x] will instantiate an innner dict if x is missing;
-    # therefore always use _var_ref_assignments.get(x) when you don't want to instantiate an inner dict
-
 # ---------------------------------------------------------------------------
 
 def get_subobject(obj, dotted_name: str, default: Any):
@@ -112,35 +107,43 @@ def get_subobject(obj, dotted_name: str, default: Any):
 #
 # Key points of the implementation are:
 #
-# - assignments of var refs to configuration fields are stored in the side table root_config._var_ref_assignments,
-#   which is keyed by the id() of the configuration model instance
+# - assignments of var refs to configuration fields are stored in a side table `_prapti_var_ref_assignments`,
+#   which, when non-empty, is monkey-patched as a private attribute in the relevant configuration model instance.
+#   Note that such private attributes are permitted by the Pydantic 2 specification as documented at [1] and [2]
 # - typically, plugins will call resolve_var_refs to get the "resolved" version of the configuration,
 #   with all var refs resolved to values.
 # - the code below is concerned with managing variable references and field assignments for
 #     - assign_field: the implementation of the assignment command
 #     - resolve_var_refs: resolve late-bound var refs to values
 #     - setup_newly_constructed_config: setup initial var refs for newly constructed configuration models
+#
+# [1] https://docs.pydantic.dev/latest/usage/models/#private-model-attributes
+# [2] https://stackoverflow.com/a/75712642/2013747
 
 # ----------------------------------------------------------------------------
 # assign_field
 
 def _assign_var_ref(target: BaseModel, field_name: str, var_ref: VarRef, root_config: RootConfiguration) -> None:
-    """Store target.field_name = VarRef(...) in _var_ref_assignments side-table"""
-    root_config._var_ref_assignments[id(target)][field_name] = var_ref
+    """Store target.field_name = VarRef(...) in _prapti_var_ref_assignments side-table"""
+    if (target_var_ref_assignments := getattr(target, "_prapti_var_ref_assignments", None)) is not None:
+        target_var_ref_assignments[field_name] = var_ref
+        return
+    setattr(target, "_prapti_var_ref_assignments", {field_name: var_ref})
 
 def _get_assigned_var_ref(target: BaseModel, field_name: str, root_config: RootConfiguration) -> VarRef | None:
-    """Retrieve the assigned VarRef for target.field_name from _var_ref_assignments side-table."""
-    if target_var_ref_assignments := root_config._var_ref_assignments.get(id(target)):
+    """Retrieve the assigned VarRef for target.field_name from _prapti_var_ref_assignments side-table.
+    Returns None if no var ref has been assigned."""
+    if (target_var_ref_assignments := getattr(target, "_prapti_var_ref_assignments", None)) is not None:
         return target_var_ref_assignments.get(field_name)
     return None
 
 def _clear_var_ref_assignment(target: BaseModel, field_name: str, root_config: RootConfiguration) -> None:
-    """Remove target.field_name = VarRef(...) from _var_ref_assignments side-table if it exists."""
-    if target_var_ref_assignments := root_config._var_ref_assignments.get(id(target)):
+    """Remove target.field_name = VarRef(...) from _prapti_var_ref_assignments side-table if it exists."""
+    if (target_var_ref_assignments := getattr(target, "_prapti_var_ref_assignments", None)) is not None:
         if field_name in target_var_ref_assignments:
             del target_var_ref_assignments[field_name]
             if not target_var_ref_assignments:
-                del root_config._var_ref_assignments[id(target)]
+                delattr(target, "_prapti_var_ref_assignments")
 
 def _assign_var(root_config: RootConfiguration, var_field_name: str, parsed_field_value: Any, source_loc: SourceLocation, log: DiagnosticsLogger) -> None:
     """Assign `parsed_field_value` to the VarEntry corresponding to `var_field_name`, creating an entry
@@ -155,7 +158,7 @@ def _assign_var(root_config: RootConfiguration, var_field_name: str, parsed_fiel
 def _assign_configuration_field(root_config: RootConfiguration, config_field_path: str, parsed_field_value: Any, source_loc: SourceLocation, log: DiagnosticsLogger) -> None:
     """Assign `parsed_field_value` to the field corresponding to `config_field_path`.
     This will trigger pydantic validation for the field assignment.
-    If `parsed_field_value` is a VarRef, store the assignment in the `_var_ref_assignments` side-table
+    If `parsed_field_value` is a VarRef, store the assignment in the `_prapti_var_ref_assignments` side-table
     """
     assert not config_field_path.startswith("vars.")
 
@@ -284,8 +287,8 @@ Model = TypeVar('Model', bound='BaseModel')
 def resolve_var_refs(target: Model, root_config: RootConfiguration, log: DiagnosticsLogger) -> Model:
     """Return an instance of the model with all var_ref field assignments resolved to values.
     Note that this does not necessarily return a copy of the model but it is guaranteed to leave
-    the input `target` unmodified."""
-    target_var_ref_assignments = root_config._var_ref_assignments.get(id(target))
+    the input `target` model unmodified."""
+    target_var_ref_assignments = getattr(target, "_prapti_var_ref_assignments", None)
     if not target_var_ref_assignments:
         # target has no VarRef assignments
         return target
