@@ -110,7 +110,7 @@ class GitlogHooks(Hooks):
         called when: the %plugins.load command loads the plugin.
         i.e. during command execution but before any response generation.
         """
-        log = context.state.log
+        log = context.log
         log.debug("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
         log.debug("prapti.experimental.gitlog: on_plugin_loaded")
         log.debug(f"{context.state.input_file_path = }")
@@ -212,7 +212,7 @@ class GitlogHooks(Hooks):
         """
         called after the file has been saved, flushed and closed, with the responses.
         """
-        log = context.state.log
+        log = context.log
         log.debug("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
         log.debug("prapti.experimental.gitlog: on_response_completed")
         log.debug(f"{context.state.input_file_path = }")

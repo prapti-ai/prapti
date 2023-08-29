@@ -6,7 +6,7 @@ import typing
 
 from .execution_state import ExecutionState
 from .configuration import RootConfiguration
-from .command_message import Message
+from ..core.logger import DiagnosticsLogger
 
 @dataclass
 class HooksContext:
@@ -14,6 +14,7 @@ class HooksContext:
     root_config: RootConfiguration
     plugin_config: typing.Any
     hooks: 'Hooks'
+    log: DiagnosticsLogger
 
 # ----------------------------------------------------------------------------
 # /// DANGER -- UNDER CONSTRUCTION ///////////////////////////////////////////

@@ -112,7 +112,7 @@ class CaptureEverythingHooks(Hooks):
             return
 
         if not self._capture_file_name:
-            context.state.log.error("bad-capture-file-name", "prapti.capture_everything: skipping capture. no capture file name.")
+            context.log.error("bad-capture-file-name", "prapti.capture_everything: skipping capture. no capture file name.")
             return
 
         self._end_time = datetime.now()
@@ -137,7 +137,7 @@ class CaptureEverythingHooks(Hooks):
 
         # write the capture file:
         config: CaptureEverythingPluginConfiguration = context.plugin_config
-        config = resolve_var_refs(config, context.root_config, context.state.log)
+        config = resolve_var_refs(config, context.root_config, context.log)
         if context.plugin_config.capture_dir:
             capture_dir = Path(context.plugin_config.capture_dir).resolve()
             if capture_dir.is_dir():
@@ -145,9 +145,9 @@ class CaptureEverythingHooks(Hooks):
                 with capture_file_path.open("w") as file:
                     json.dump(self._capture_data, file)
             else:
-                context.state.log.error("bad-capture-dir", f"prapti.capture_everything: skipping capture. capture directory '{capture_dir}' does not exist or is not a directory")
+                context.log.error("bad-capture-dir", f"prapti.capture_everything: skipping capture. capture directory '{capture_dir}' does not exist or is not a directory")
         else:
-            context.state.log.warning("capture-dir-not-set", "prapti.capture_everything: plugin is loaded but capture directory has not been set. add '% prapti.plugins.capture_everything.capture_dir = ... to your config.")
+            context.log.warning("capture-dir-not-set", "prapti.capture_everything: plugin is loaded but capture directory has not been set. add '% prapti.plugins.capture_everything.capture_dir = ... to your config.")
 
 class CaptureEverythingPlugin(Plugin):
     def __init__(self):
