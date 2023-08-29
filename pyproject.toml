@@ -60,6 +60,8 @@ prapti = "prapti.tool:main"
 
 "prapti.include" = "prapti.plugins.include:prapti_plugin"
 
+"prapti.capture_everything" = "prapti.plugins.capture_everything:prapti_plugin"
+
 "prapti.experimental.agents" = "prapti.plugins.experimental_agents:prapti_plugin"
 "prapti.experimental.gitlog" = "prapti.plugins.experimental_gitlog:prapti_plugin"
 

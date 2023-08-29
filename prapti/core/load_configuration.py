@@ -30,6 +30,7 @@ def load_config_file(config_path: pathlib.Path, state: ExecutionState) -> bool:
     """
     if config_path.is_file():
         state.log.info("loading-config", "loading configuration file", config_path)
+        state.config_file_paths.append(config_path)
         try:
             config_file_lines = config_path.read_text(encoding="utf-8").splitlines(keepends=True)
             parse_messages_and_interpret_commands(config_file_lines, config_path, state)
@@ -131,6 +132,7 @@ def execute_in_tree_prapticonfig_md_files(prapticonfig_mds: list[tuple[pathlib.P
         if message_sequence:
             try:
                 state.log.info("loading-in-tree-config", "loading configuration file", config_path)
+                state.config_file_paths.append(config_path)
                 interpret_commands(message_sequence, state)
                 state.message_sequence += message_sequence
                 state.root_config.prapti.config_root = False

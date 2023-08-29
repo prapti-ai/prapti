@@ -3,6 +3,7 @@
 """
 import argparse
 import pathlib
+import sys
 from typing import Sequence, TextIO
 from dataclasses import dataclass
 
@@ -175,7 +176,11 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
     if not argument_parser:
         argument_parser = make_argument_parser()
 
-    command_line_args = argument_parser.parse_args(args=argv) # parse command line args, uses sys.argv if None is passed
+    if not argv:
+        argv = sys.argv # use sys.argv if None is passed
+    state_argv = list(argv) # capture a copy
+    args = argv[1:] # parse_args doesn't want the command name
+    command_line_args = argument_parser.parse_args(args=args)
 
     log_level = log_levels.get(command_line_args.log_level.upper(), None)
     if not log_level:
@@ -183,7 +188,7 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
         return 1
 
     # construct execution state
-    state = ExecutionState(log=create_diagnostics_logger(initial_level=log_level), input_file_path=pathlib.Path(command_line_args.filename))
+    state = ExecutionState(prapti_version=__version__, argv=state_argv, log=create_diagnostics_logger(initial_level=log_level), input_file_path=pathlib.Path(command_line_args.filename))
     core_state = CoreExecutionState()
     state.private_core_state = core_state
     core_state.actions.merge(builtin_actions)
@@ -246,6 +251,8 @@ def main(argv: Sequence[str] | None = None, test_exfil: dict|None = None) -> int
         if state.root_config.prapti.halt_on_error and (state.log.critical_count() > 0 or state.log.error_count() > 0):
             state.log.error("error-halting", "halting due to errors.", state.input_file_path)
             return 1
+
+        core_state.hooks_distributor.on_generating_response()
 
         state.log.info("generating-responses", "generating response(s). please wait...", state.input_file_path)
 

@@ -107,6 +107,17 @@ def load_plugin_by_name(plugin_name: str, source_loc: SourceLocation, state: Exe
         if plugin:
             load_plugin(plugin, source_loc, state)
 
+def get_loaded_plugins_info(state: ExecutionState) -> list[dict[str, str]]:
+    core_state = get_private_core_state(state)
+    return [
+        {
+            "name": plugin.name,
+            "version": plugin.version,
+            "description": plugin.description,
+        }
+        for plugin_name, plugin in core_state.loaded_plugins.items()
+    ]
+
 @builtin_actions.add_action("prapti.plugins.load")
 def plugins_load(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
     """Load a plugin. Installs hooks and makes commands/actions available."""
