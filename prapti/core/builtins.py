@@ -93,7 +93,7 @@ def load_plugin(plugin: Plugin, source_loc: SourceLocation, state: ExecutionStat
         core_state.loaded_plugins[plugin.name] = plugin
 
         if plugin_hooks:
-            hooks_context = HooksContext(state=state, root_config=state.root_config, plugin_config=plugin_context.plugin_config, hooks=plugin_hooks)
+            hooks_context = HooksContext(state=state, root_config=state.root_config, plugin_config=plugin_context.plugin_config, hooks=plugin_hooks, log=state.log)
             plugin_hooks.on_plugin_loaded(hooks_context)
             core_state.hooks_distributor.add_hooks(hooks_context)
     except Exception as ex:
