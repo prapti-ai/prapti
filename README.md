@@ -31,10 +31,22 @@ Installation involves the following required steps:
 In your terminal, run:
 
 ```
-pip install git+https://github.com/prapti-ai/prapti
+pip install prapti
 ```
 
 (or `pip3` or `py -3 -m pip` depending on your system).
+
+To update to the latest version of Prapti, run:
+
+```
+pip install prapti --upgrade
+```
+
+To install the the latest development version of Prapti directly from our git repo, run:
+
+```
+pip install git+https://github.com/prapti-ai/prapti
+```
 
 We recommend running prapti in a Python virtual environment such as
 [venv](https://docs.python.org/3/tutorial/venv.html).
