@@ -42,7 +42,7 @@ To update to the latest version of Prapti, run:
 pip install prapti --upgrade
 ```
 
-To install the the latest development version of Prapti directly from our git repo, run:
+To install the latest development version of Prapti directly from our git repo, run:
 
 ```
 pip install git+https://github.com/prapti-ai/prapti
