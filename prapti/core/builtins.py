@@ -166,7 +166,7 @@ def delegate_generate_responses(state: ExecutionState, responder_name: str, inpu
     core_state = get_private_core_state(state)
     delegate_responder_context: ResponderContext|None = core_state.responder_contexts.get(responder_name, None)
     if delegate_responder_context is None:
-        state.log.error("delegation-to-nonexistant-responder", "could not delegate to responder '{responder_name}'. responder does not exist.")
+        state.log.error("delegation-to-nonexistant-responder", f"could not delegate to responder '{responder_name}'. responder does not exist.")
         return []
     return delegate_responder_context.responder.generate_responses(input_, delegate_responder_context)
 
@@ -191,11 +191,11 @@ def responder_new(name: str, raw_args: str, context: ActionContext) -> None|str|
                 core_state.responder_contexts[responder_name] = responder_context
                 setattr(context.root_config.responders, responder_name, responder_context.responder_config)
             else:
-                context.log.error("responder-new-failed", "couldn't construct responder '{responder_name}'. plugin '{plugin_name}' did not construct responder.", context.source_loc)
+                context.log.error("responder-new-failed", f"couldn't construct responder '{responder_name}'. plugin '{plugin_name}' did not construct responder.", context.source_loc)
         else:
-            context.log.error("responder-new-not-a-responder", "couldn't construct responder '{responder_name}'. plugin '{plugin_name}' does not provide a responder.", context.source_loc)
+            context.log.error("responder-new-not-a-responder", f"couldn't construct responder '{responder_name}'. plugin '{plugin_name}' does not provide a responder.", context.source_loc)
     else:
-        context.log.error("failed-responder-new", "couldn't construct responder '{responder_name}'. plugin '{plugin_name}' not loaded.", context.source_loc)
+        context.log.error("failed-responder-new", f"couldn't construct responder '{responder_name}'. plugin '{plugin_name}' not loaded.", context.source_loc)
 
 @builtin_actions.add_action("prapti.responder.push")
 def responder_push(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
