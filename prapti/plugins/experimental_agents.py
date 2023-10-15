@@ -1,4 +1,4 @@
-""""
+"""
     Proof-of-concept for multiple agents
 
     - treat responder instances as agents
@@ -23,8 +23,11 @@
 import copy
 import random
 import re
+from typing import AsyncGenerator
+from asyncio import Semaphore
 
 from pydantic import BaseModel, Field, ConfigDict
+from cancel_token import CancellationToken
 
 from ..core.plugin import Plugin, PluginCapabilities, PluginContext
 from ..core.action import ActionNamespace, ActionContext
@@ -68,13 +71,13 @@ def discuss(name: str, raw_args: str, context: ActionContext) -> None|str|Messag
         context.plugin_config.discussion_group = args[1:]
 
     # TODO: when we add the ability for actions to insert messages before/after the current message
-    # we can kick-off the discussion by @-mentioning the first participant in a private message
+    # we can kick-off the discussion by @-mentioning the first participant in a hidden message
     # right now the user has to @-mention the first user manually to get a specific user to start.
     #return [Message(role="_prapti.experimental.agents", name=None, content=[f"@{agent_name}"])]
     return None
 
 @_actions.add_action("!agents.ask")
-def discuss(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
+def ask(name: str, raw_args: str, context: ActionContext) -> None|str|Message:
     """prompt a single agent.
     usage:
         !agents.ask agent_name
@@ -91,6 +94,14 @@ class AgentsResponderConfiguration(BaseModel):
     """Configuration parameters for agents responder."""
     model_config = ConfigDict(
         validate_assignment=True)
+
+async def _async_message_content_processor(message: Message, async_content: AsyncGenerator[str, None], sem: Semaphore) -> AsyncGenerator[str, None]:
+    try:
+        async for s in async_content:
+            message.content.append(s)
+            yield s
+    finally:
+        sem.release()
 
 class AgentsResponder(Responder):
     """Responder that controls discussion between agents."""
@@ -136,7 +147,7 @@ class AgentsResponder(Responder):
                 break
         return list(participants - set(MRU)) + list(reversed(MRU)) # least recently (or never) mentioned at front
 
-    def _switch_roles_for_selected_agent(self, message_sequence: list[Message], selected_agent_name: str, context: ResponderContext):
+    def _switch_roles_for_selected_agent(self, message_sequence: list[Message], selected_agent_name: str):
         """switch roles in the input message sequence so that names and roles
           appear as if viewed from the selected agent's perspective. i.e. other agents
           appear as users, and only global and the selected agent's system prompts are active."""
@@ -158,7 +169,7 @@ class AgentsResponder(Responder):
                 case _:
                     pass
 
-    def _restore_roles(self, context: ResponderContext):
+    def _restore_switched_roles(self):
         """set name associated with response messages to agent's name"""
 
         # restore message enable and role for next round (in case there is a followup)
@@ -179,21 +190,20 @@ class AgentsResponder(Responder):
                 context.log.error("no-rexponder-for-agent", f"prapti.experimental.agents: discussion_group specifies agent '{agent_name}' but no responder exists with that name.")
         return result
 
-    def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
+    async def _async_response_generator(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         config: AgentsResponderConfiguration = context.responder_config
         context.log.debug(f"prapti.experimental.agents: input: {config = }", context.state.input_file_path)
         config = resolve_var_refs(config, context.root_config, context.log)
         context.log.debug(f"prapti.experimental.agents: resolved: {config = }", context.state.input_file_path)
 
         message_sequence = copy.deepcopy(input_)
-        responses = []
 
         plugin_config = resolve_var_refs(context.plugin_config, context.root_config, context.log)
         participants: set[str] = self._valid_discussion_group_participants(plugin_config, context)
 
         if not participants:
             context.log.warning("agents-no-participants", "prapti.experimental.agents: could not continue discussion. no valid participants specified in discussion_group.")
-            return []
+            return
 
         all_pending_at_mentions: set[str] = self._compute_pending_at_mentions(message_sequence, context) # all @-mentions, not limited to participants or even agents/responders
         participants_LRU: list[str] = self._compute_participants_LRU(message_sequence, participants, context) # front is least recent
@@ -211,14 +221,47 @@ class AgentsResponder(Responder):
             else:
                 selected_agent_name = participants_LRU[0] # participants_LRU is non-empty here
 
-            self._switch_roles_for_selected_agent(message_sequence, selected_agent_name, context)
-            agent_responses = delegate_generate_responses(context.state, selected_agent_name, message_sequence)
-            self._restore_roles(context)
+            self._switch_roles_for_selected_agent(message_sequence, selected_agent_name)
 
-            for message in agent_responses:
+            async_agent_responses = delegate_generate_responses(context.state, selected_agent_name, message_sequence, cancellation_token)
+            if cancellation_token.cancelled:
+                return
+
+            copied_agent_responses = [] # collect a local copy of the messages
+            async_content_completion_sem = Semaphore(value=0)
+            async_content_count = 0
+            async for message in async_agent_responses:
                 # name assistant responses according to the name of the agent that generated them
                 if message.role == "assistant" and not message.name:
                     message.name = selected_agent_name
+
+                async_content = message.async_content
+                message.async_content = None # avoid deep copying the async content
+
+                # collect a copy of generated messages for synchronous processing within the agent loop
+                message_copy = copy.deepcopy(message)
+                if async_content:
+                    # _async_content_processor passes through the asynchronous stream of message content
+                    # and simultaneously accumulates it into our local copy: message_copy.content
+                    message.async_content = _async_message_content_processor(message_copy, async_content, async_content_completion_sem)
+                    async_content_count += 1
+                copied_agent_responses.append(message_copy)
+
+                # yield the original generated messages to the client for output and streaming
+                yield message
+
+            # wait for all _async_message_content_processor processing to complete
+            # i.e. for all async content to arrive
+            for _ in range(0, async_content_count):
+                await async_content_completion_sem.acquire()
+
+            if cancellation_token.cancelled:
+                return
+
+            self._restore_switched_roles()
+
+            for message in copied_agent_responses:
+                message.content = ["".join(message.content).strip()] # flatten the message content to a single string
 
                 # decrement discussion counter for any messages in discussion, whether @-mentions or other
                 if message.name in context.plugin_config.discussion_group:
@@ -230,15 +273,15 @@ class AgentsResponder(Responder):
                 participants_LRU.remove(selected_agent_name)
                 participants_LRU.append(selected_agent_name)
 
-            message_sequence += agent_responses
-            responses += agent_responses
+            message_sequence += copied_agent_responses
 
             if participant_at_mentions:
                 participant_at_mentions.add(participants_LRU[0])
                 # ^^^ fake @-mention of least-recent participant
                 # this hopefully ensures that all participants get a turn even if they are also @-mentioning each other
 
-        return responses
+    def generate_responses(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
+        return self._async_response_generator(input_, cancellation_token, context)
 
 # ^^^ END UNDER CONSTRUCTION /////////////////////////////////////////////////
 # ----------------------------------------------------------------------------

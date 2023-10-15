@@ -16,11 +16,14 @@
 # /// DANGER -- UNDER CONSTRUCTION ///////////////////////////////////////////
 
 import datetime
-import sys
 import inspect
 import json
+from typing import AsyncGenerator, Iterable
+from enum import Enum
+import asyncio
 
 from pydantic import BaseModel, Field, ConfigDict
+from cancel_token import CancellationToken
 import gpt4all
 
 from ...core.plugin import Plugin, PluginCapabilities, PluginContext
@@ -35,8 +38,8 @@ def convert_message_sequence_to_text_prompt(message_sequence: list[Message], log
 
     result = ""
     for message in message_sequence:
-        if not message.is_enabled or message.is_private:
-            continue # skip disabled and private messages
+        if not message.is_enabled or message.is_hidden:
+            continue # skip disabled and hidden messages
 
         if message.role not in ["system", "user", "assistant"]:
             log.warning("unrecognised-public-role", f"message will not be included in LLM prompt. public role '{message.role}' is not recognised.", message.source_loc)
@@ -45,7 +48,7 @@ def convert_message_sequence_to_text_prompt(message_sequence: list[Message], log
         # HACK WARNING: not all LLMs use the same chat structure delimiters.
         # the following format will perform badly if it is not consistent with the fine-tuning of the selected model.
         # ideally, we will delegate chat structure formatting to our dependencies.
-        assert len(message.content) == 1 and isinstance(message.content[0], str), "gpt4all.chat: expected flattened message content"
+        assert len(message.content) == 1 and isinstance(message.content[0], str), "gpt4all.chat: internal error. expected flattened message content"
         match message.role:
             case "system":
                 result += "### Instruction:\n"
@@ -115,15 +118,44 @@ class GPT4AllResponderConfiguration(BaseModel):
 
 _generate_arg_names = { "max_tokens", "temp", "top_k", "top_p", "repeat_penalty", "repeat_last_n", "n_batch", "n_predict", "streaming" }
 
+class QueueSentinel(Enum):
+    END_OF_RESPONSE = 0
+
+def _sync_generator_to_queue(sync_generator: Iterable[str], queue: asyncio.Queue[str|QueueSentinel], loop: asyncio.AbstractEventLoop, cancellation_token: CancellationToken) -> None:
+    try:
+        for s in sync_generator:
+            # NOTE: asyncio.Queue is neither thread-aware nor thread safe: https://stackoverflow.com/questions/32889527
+            # hence the call to loop.call_soon_threadsafe()
+            loop.call_soon_threadsafe(queue.put_nowait, s)
+            if cancellation_token.cancelled:
+                break
+    finally:
+        loop.call_soon_threadsafe(queue.put_nowait, QueueSentinel.END_OF_RESPONSE)
+
+async def _generate_async_content(sync_generator: Iterable[str], cancellation_token: CancellationToken) -> AsyncGenerator[str, None]:
+    queue: asyncio.Queue[str|QueueSentinel] = asyncio.Queue(maxsize=0) # unbounded
+    thread_task = asyncio.create_task(asyncio.to_thread(_sync_generator_to_queue, sync_generator, queue, asyncio.get_event_loop(), cancellation_token))
+
+    while True:
+        s = await queue.get()
+        if s == QueueSentinel.END_OF_RESPONSE:
+            break
+        yield s
+
+    await thread_task
+
 class GPT4AllChatResponder(Responder):
     def __init__(self):
         pass
 
     def construct_configuration(self, context: ResponderContext) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
-        return GPT4AllResponderConfiguration(), [("model", VarRef("model")), ("temp", VarRef("temperature"))]
+        return GPT4AllResponderConfiguration(), [
+            ("model_name", VarRef("model")),
+            ("temp", VarRef("temperature")),
+            ("streaming", VarRef("stream"))]
         # TODO: n -> var(n)
 
-    def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
+    async def _async_response_generator(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         config: GPT4AllResponderConfiguration = context.responder_config
         config = resolve_var_refs(config, context.root_config, context.log)
         context.log.debug(f"gpt4all.chat: {config = }", context.state.input_file_path)
@@ -131,33 +163,38 @@ class GPT4AllChatResponder(Responder):
         if context.root_config.prapti.dry_run:
             context.log.info("gpt4all.chat-dry-run", "gpt4all.chat: dry run: bailing before hitting the GPT4All API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
-            return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {json.dumps(config.model_dump())}"])]
+            yield Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {json.dumps(config.model_dump())}"])
+            return
 
         prompt = convert_message_sequence_to_text_prompt(input_, context.log)
 
-        model = gpt4all.GPT4All(model_name = config.model_name,
-                                model_path = config.model_path,
-                                model_type = None, # currently unused
-                                allow_download = False,
-                                n_threads = config.n_threads if config.n_threads > 0 else None)
+        context.log.info("gpt4all-loading-model", "gpt4all.chat: loading model. please wait...", context.state.input_file_path)
+
+        model = await asyncio.to_thread(gpt4all.GPT4All,
+            model_name = config.model_name,
+            model_path = config.model_path,
+            model_type = None, # currently unused
+            allow_download = False,
+            n_threads = config.n_threads if (config.n_threads and config.n_threads > 0) else None)
+        if cancellation_token.cancelled:
+            return
 
         generate_args = config.model_dump(include=_generate_arg_names)
 
-        context.log.debug(f"gpt4all.chat: {generate_args = }", context.state.input_file_path)
-        if config.streaming:
-            response = ""
-            sys.stdout.flush()
-            response_generator = model.generate(prompt=prompt, **generate_args)
-            for s in response_generator:
-                response += s
-                sys.stdout.write(s)
-                sys.stdout.flush()
-            sys.stdout.write("\n")
-            sys.stdout.flush()
-        else:
-            response = model.generate(prompt=prompt, **generate_args)
+        context.log.info("gpt4all-generating", "gpt4all.chat: generating...", context.state.input_file_path)
 
-        return [Message(role="assistant", name=None, content=[response])]
+        context.log.debug(f"gpt4all.chat: {generate_args = }", context.state.input_file_path)
+        response = await asyncio.to_thread(model.generate, prompt=prompt, **generate_args)
+
+        if isinstance(response, str):
+            context.log.debug("gpt4all.chat: got non-streaming response", context.state.input_file_path)
+            yield Message(role="assistant", name=None, content=[response], async_content=None)
+        else:
+            context.log.info("gpt4all-streaming-generation", "gpt4all.chat: streaming generation...", context.state.input_file_path)
+            yield Message(role="assistant", name=None, content=[], async_content=_generate_async_content(response, cancellation_token))
+
+    def generate_responses(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
+        return self._async_response_generator(input_, cancellation_token, context)
 
 # ^^^ END UNDER CONSTRUCTION /////////////////////////////////////////////////
 # ----------------------------------------------------------------------------

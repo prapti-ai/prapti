@@ -1,12 +1,13 @@
 """
     Builtin actions.
 """
-from typing import Any
+from typing import Any, AsyncGenerator
 import types
 import json
 import importlib.metadata
 
 import pydantic
+from cancel_token import CancellationToken
 
 from ._core_execution_state import get_private_core_state
 from .execution_state import ExecutionState
@@ -162,13 +163,18 @@ def lookup_active_responder(state: ExecutionState) -> tuple[str, ResponderContex
     responder_name = core_state.hooks_distributor.on_lookup_active_responder(responder_name)
     return (responder_name, core_state.responder_contexts.get(responder_name, None))
 
-def delegate_generate_responses(state: ExecutionState, responder_name: str, input_: list[Message]) -> list[Message]:
+async def _empty_async_generator() -> AsyncGenerator[Message, None]:
+    # for alternatives see: https://stackoverflow.com/questions/77295311/how-to-define-an-empty-async-generator-in-python
+    if False:
+        yield Message(role="", name=None, content=[]) # need the yield keyword here to make it an async generator
+
+def delegate_generate_responses(state: ExecutionState, responder_name: str, input_: list[Message], cancellation_token: CancellationToken) -> AsyncGenerator[Message, None]:
     core_state = get_private_core_state(state)
     delegate_responder_context: ResponderContext|None = core_state.responder_contexts.get(responder_name, None)
     if delegate_responder_context is None:
-        state.log.error("delegation-to-nonexistant-responder", f"could not delegate to responder '{responder_name}'. responder does not exist.")
-        return []
-    return delegate_responder_context.responder.generate_responses(input_, delegate_responder_context)
+        state.log.error("delegation-to-nonexistant-responder", "could not delegate to responder '{responder_name}'. responder does not exist.")
+        return _empty_async_generator()
+    return delegate_responder_context.responder.generate_responses(input_, cancellation_token, delegate_responder_context)
 
 @builtin_actions.add_action("prapti.responder.new")
 def responder_new(name: str, raw_args: str, context: ActionContext) -> None|str|Message:

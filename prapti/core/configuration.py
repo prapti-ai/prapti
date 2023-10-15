@@ -61,7 +61,8 @@ class Vars(SimpleNamespace):
     def __init__(self):
         self.model = VarEntry() # str
         self.temperature = VarEntry() # float
-        self.n = VarEntry() # int, number of responses to generate
+        self.n = VarEntry(value=1) # int, number of responses to generate
+        self.stream = VarEntry(value=True)
 
 class RootConfiguration(BaseModel):
     """The root of the configuration tree"""

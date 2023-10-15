@@ -13,7 +13,7 @@ Here we'll use GPT4ALL:
 
 Depending on the server, you will need to specify the model file either here, or in the server settings:
 
-%model = "ggml-mpt-7b-chat.bin"
+%model = "nous-hermes-13b.ggmlv3.q4_0.bin"
 
 %responders.default.max_tokens = 500
 
