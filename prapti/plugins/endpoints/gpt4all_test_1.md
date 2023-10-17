@@ -21,7 +21,7 @@ The first thing that you need to do is specify the path where your GPT4All model
 
 Now specify the model file name. It must be a model file that exists in the directory that you specified above for `model_path`.
 
->%responders.default.model_name = "ggml-mpt-7b-chat.bin"
+>%responders.default.model_name = "nous-hermes-13b.ggmlv3.q4_0.bin"
 
 We also tried the following model. The `//` means the following configuration line is disabled.
 >//%responders.default.model_name = "wizardLM-13B-Uncensored.ggmlv3.q4_0.bin"
