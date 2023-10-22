@@ -64,7 +64,7 @@ Given the existing documentation, the User Guide can serve as a comprehensive ma
 - Installation instructions
 - Setting up OpenAI API key
 - Checking that the `prapti` tool runs manually in the terminal
-- Setting up a keybinding to run `prapti` in your editor
+- Setting up a key binding to run `prapti` in your editor
 
 ## Prapti Conversations
 - Explanation of how Prapti treats a markdown document as a sequence of "messages"
