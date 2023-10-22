@@ -299,7 +299,7 @@ class OpenAIChatResponder(Responder):
         chat_args["messages"] = messages
 
         if context.root_config.prapti.dry_run:
-            context.log.info("openai.chat-dry-run", "openai.chat: dry run: bailing before hitting the OpenAI API", context.state.input_file_path)
+            context.log.info("openai.chat-dry-run", "openai.chat: dry run: halting before calling the OpenAI API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
             chat_args["messages"] = ["..."] # avoid overly long output
             yield Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nchat_args = {json.dumps(chat_args)}"])

@@ -32,7 +32,7 @@ To add keyboard shortcuts use the *Quick Open* menu to run:
 
 ### Keyboard shortcut to create a new file, in a selected folder
 
-To use this shortcut first click on a directory in the VSCode File Explorer. Now type `Ctrl+n`. Now type the name of the file to create and hit `Enter` the file should open for editing and you can start using prapti. (For use with prapti the file name should end in `.md`.)
+To use this shortcut first click on a directory in the VSCode File Explorer. Now type `Ctrl+n`. Now type the name of the file to create and press `Enter`. The file should open for editing and you can start using prapti. (For use with prapti the file name should end in `.md`.)
 
 ```json
 {

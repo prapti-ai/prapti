@@ -188,7 +188,7 @@ class KoboldcppResponder(Responder):
             return
 
         if context.root_config.prapti.dry_run:
-            context.log.info("koboldcpp-text-dry-run", "koboldcpp.text: dry run: bailing before hitting the Kobold API", context.state.input_file_path)
+            context.log.info("koboldcpp-text-dry-run", "koboldcpp.text: dry run: halting before calling the Kobold API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
             yield Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {json.dumps(config.model_dump())}"])
             return

@@ -87,7 +87,7 @@ After running `prapti`, refresh or reload the `test-chat.md` file. You should se
 
 ### 4. Set up a keybinding to run `prapti` in your text editor
 
-Choose a key combination (e.g. `Ctrl-Enter`) in your preferred text editor, and configure it to save the current file and run `prapti`. This keybinding should be set to function only when you're editing markdown files.
+Choose a key combination (e.g. `Ctrl+Enter`) in your preferred text editor, and configure it to save the current file and run `prapti`. This keybinding should be set to function only when you're editing markdown files.
 
 Below are the instructions for VSCode. If you use another editor please contribute instructions.
 
@@ -95,7 +95,7 @@ Below are the instructions for VSCode. If you use another editor please contribu
 
 > NOTE: This key binding runs `prapti` in the active VSCode terminal window. So make sure you have the terminal open with the `prapti` command available.
 
-First use the *Quick Open* menu (*Cmd-Shift-P* on Mac, *Ctrl-Shift-P* on Windows) to run:
+First use the *Quick Open* menu (*Cmd+Shift+P* on Mac, *Ctrl+Shift+P* on Windows) to run:
 
 > Preferences: Open Keyboard Shortcuts (JSON)
 
@@ -120,7 +120,7 @@ then add the following binding to the opened `keybindings.json` file.
 },
 ```
 
-Now, when editing your markdown file you should be able to hit `Ctrl-Enter` to get a response from the LLM. You can watch the terminal window for progress. Be patient, GPT4 can take 30 seconds to generate a full response.
+Now, when editing your markdown file you should be able to press `Ctrl+Enter` to get a response from the LLM. You can watch the terminal window for progress. Be patient, GPT4 can take 30 seconds to generate a full response.
 
 See [our documentation](docs/editor_tweaks.md) for optional text editor setup to streamline your experience.
 
