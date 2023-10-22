@@ -7,8 +7,10 @@
 import abc
 from typing import Any
 from dataclasses import dataclass
+from typing import AsyncGenerator
 
 from pydantic import BaseModel
+from cancel_token import CancellationToken
 
 from .command_message import Message
 from .configuration import RootConfiguration, VarRef
@@ -33,5 +35,5 @@ class Responder(metaclass=abc.ABCMeta):
         return None
 
     @abc.abstractmethod
-    def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
+    def generate_responses(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         pass

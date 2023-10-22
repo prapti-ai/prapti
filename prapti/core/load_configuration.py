@@ -29,7 +29,7 @@ def load_config_file(config_path: pathlib.Path, state: ExecutionState) -> bool:
     loads without error.
     """
     if config_path.is_file():
-        state.log.info("loading-config", "loading configuration file", config_path)
+        state.log.info("loading-config-file", "loading configuration file", config_path)
         state.config_file_paths.append(config_path)
         try:
             config_file_lines = config_path.read_text(encoding="utf-8").splitlines(keepends=True)

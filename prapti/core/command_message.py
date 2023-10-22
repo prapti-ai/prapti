@@ -5,7 +5,7 @@
     chat Messages, each of which may contain interjecting Commands.
 """
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, AsyncGenerator
 from .source_location import SourceLocation
 
 @dataclass
@@ -26,11 +26,12 @@ class Message:
     content: list[str|Command|None]
         # ^^^ allow embedded inline commands e.g. for file inclusion
         # also allow "None" items so that command outputs can be re-written to None without otherwise modifying the list
+    async_content: AsyncGenerator[str, None]|None = None
     is_enabled: bool = True
     source_loc: SourceLocation = field(default_factory=SourceLocation)
 
     @property
-    def is_private(self) -> bool:
+    def is_hidden(self) -> bool:
         return self.role.startswith("_")
 
     def content_is_empty(self) -> bool:

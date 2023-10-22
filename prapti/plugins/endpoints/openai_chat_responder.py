@@ -6,8 +6,13 @@ import datetime
 import inspect
 import json
 import copy
+from enum import Enum
+from typing import AsyncGenerator, Any
+import asyncio
+from contextlib import suppress
 
 from pydantic import BaseModel, Field, ConfigDict
+from cancel_token import CancellationToken
 import openai
 import tiktoken
 
@@ -78,7 +83,8 @@ class OpenAIChatResponderConfiguration(BaseModel):
     n: int = Field(default=1, description=inspect.cleandoc("""\
         How many chat completion choices to generate for each input message."""))
 
-    # stream: bool (not supported, yet)
+    stream: bool = Field(default=False, description=inspect.cleandoc("""\
+        If set, partial message fragments will be returned progressively as they are generated."""))
 
     stop: str|list[str]|None = Field(default=None, description=inspect.cleandoc("""\
         Up to 4 sequences where the API will stop generating further tokens."""))
@@ -175,8 +181,8 @@ def get_model_token_limit(model: str) -> int:
 def convert_message_sequence_to_openai_messages(message_sequence: list[Message], log: DiagnosticsLogger) -> list[dict]:
     result = []
     for message in message_sequence:
-        if not message.is_enabled or message.is_private:
-            continue # skip disabled and private messages
+        if not message.is_enabled or message.is_hidden:
+            continue # skip disabled and hidden messages
 
         if message.role not in ["system", "user", "assistant"]:
             log.warning("unrecognised-public-role", f"message will not be included in LLM prompt. public role '{message.role}' is not recognised.", message.source_loc)
@@ -195,15 +201,74 @@ def convert_message_sequence_to_openai_messages(message_sequence: list[Message],
         result.append(m)
     return result
 
+class QueueSentinel(Enum):
+    END_OF_RESPONSE = 0
+
+async def _cancel_async_generator(agen: AsyncGenerator) -> None:
+    # https://stackoverflow.com/questions/60226557/how-to-forcefully-close-an-async-generator
+    task = asyncio.create_task(agen.__anext__())
+    task.cancel()
+    with suppress(asyncio.CancelledError):
+        await task
+
+async def _stream_chunks_task(chunks: AsyncGenerator[dict, None], queues: list[asyncio.Queue[str|QueueSentinel]]) -> None:
+    """receive chunks from the async generator returned by openai.ChatCompletion.acreate
+    and route each chunk into the appropriate queue. this part of the receive process is cancelable.
+    """
+    async for chunk in chunks:
+        if chunk["choices"]:
+            choices = chunk["choices"]
+            for choice in choices:
+                index = choice["index"]
+                delta = choice["delta"]
+                if "content" in delta:
+                    if bool(delta_content := delta["content"]):
+                        queues[index].put_nowait(delta_content)
+
+async def _streaming_receive_task(chunks: AsyncGenerator[dict, None], queues: list[asyncio.Queue[str|QueueSentinel]], cancellation_token: CancellationToken) -> None:
+    """stream chunks from the async generator returned by openai.ChatCompletion.acreate
+    and route to queues using _stream_chunks_task.
+    handle cancellation and ensure that all queues are terminated with a END_OF_RESPONSE item
+    both at the end of processing and if cancelled."""
+    try:
+        receive_chunks_task = asyncio.create_task(_stream_chunks_task(chunks, queues))
+        cancellation_token.on_cancel(lambda: _discard_arg(receive_chunks_task.cancel()))
+
+        with suppress(asyncio.CancelledError):
+            await receive_chunks_task
+
+        if cancellation_token.cancelled:
+            # cancel the source, i.e. the AsyncGenerator that openai.ChatCompletion.acreate gave us
+            with suppress(asyncio.CancelledError):
+                await _cancel_async_generator(chunks)
+    finally:
+        # terminate the queues. note that this needs to happen under all cancellation and error scenarios
+        for queue in queues:
+            queue.put_nowait(QueueSentinel.END_OF_RESPONSE)
+
+async def _dequeue_async_content(queue) -> AsyncGenerator[str, None]:
+    while True:
+        s = await queue.get()
+        if s == QueueSentinel.END_OF_RESPONSE:
+            return
+        yield s
+
+def _discard_arg(arg: Any) -> None:
+    return None
+
 class OpenAIChatResponder(Responder):
     def __init__(self):
         # save OpenAI global variables because local.openai.chat may alter them
         self._openai_globals = load_api_key_and_organization()
 
     def construct_configuration(self, context: ResponderContext) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
-        return OpenAIChatResponderConfiguration(), [("model", VarRef("model")), ("temperature", VarRef("temperature")), ("n", VarRef("n"))]
+        return OpenAIChatResponderConfiguration(), [
+            ("model", VarRef("model")),
+            ("temperature", VarRef("temperature")),
+            ("n", VarRef("n")),
+            ("stream", VarRef("stream"))]
 
-    def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
+    async def _async_response_generator(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         config: OpenAIChatResponderConfiguration = context.responder_config
         context.log.debug(f"openai.chat: input: {config = }", context.state.input_file_path)
         config = resolve_var_refs(config, context.root_config, context.log)
@@ -225,7 +290,7 @@ class OpenAIChatResponder(Responder):
                     context.log.info("openai.chat-clamping-max-tokens", f"openai.chat: clamping requested completion to {config.max_tokens} max tokens", context.state.input_file_path)
                 else:
                     context.log.info("openai.chat-at-token-limit", "openai.chat: token limit reached. exiting", context.state.input_file_path)
-                    return []
+                    return
 
         context.log.debug(f"openai.chat: final: {config = }")
         chat_args = config.model_dump(exclude_none=True, exclude_defaults=True)
@@ -237,20 +302,58 @@ class OpenAIChatResponder(Responder):
             context.log.info("openai.chat-dry-run", "openai.chat: dry run: bailing before hitting the OpenAI API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
             chat_args["messages"] = ["..."] # avoid overly long output
-            return [Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nchat_args = {json.dumps(chat_args)}"])]
+            yield Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nchat_args = {json.dumps(chat_args)}"])
+            return
 
-        # docs: https://platform.openai.com/docs/api-reference/chat/create
-        response = openai.ChatCompletion.create(**chat_args)
-        context.log.debug(f"openai.chat: {response = }", context.state.input_file_path)
+        if cancellation_token.cancelled:
+            return
+        try:
+            # docs: https://platform.openai.com/docs/api-reference/chat/create
+            if config.stream:
+                # https://github.com/openai/openai-cookbook/blob/main/examples/How_to_stream_completions.ipynb
+                task = asyncio.create_task(openai.ChatCompletion.acreate(**chat_args))
+                cancellation_token.on_cancel(lambda: _discard_arg(task.cancel()))
+                chunks = None
+                with suppress(asyncio.CancelledError):
+                    chunks = await task
+                if cancellation_token.cancelled or chunks is None:
+                    return
 
-        if len(response["choices"]) == 1:
-            choice = response["choices"][0]
-            result = [Message(role="assistant", name=None, content=[choice.message["content"].strip()])]
-        else:
-            result = []
-            for i, choice in enumerate(response["choices"], start=1):
-                result.append(Message(role="assistant", name=str(i), content=[choice.message["content"].strip()]))
-        return result
+                queues: list[asyncio.Queue[str|QueueSentinel]] = [asyncio.Queue(maxsize=0) for _ in range(config.n)]
+                # ^^^ unbounded queues -- to avoid constraining caller's response iteration strategy
+                receive_task = asyncio.create_task(_streaming_receive_task(chunks, queues, cancellation_token))
+
+                if config.n == 1:
+                    yield Message(role="assistant", name=None, content=[], async_content=_dequeue_async_content(queues[0]))
+                else:
+                    for i, queue in enumerate(queues, start=1):
+                        yield Message(role="assistant", name=str(i), content=[], async_content=_dequeue_async_content(queue))
+
+                await receive_task
+            else:
+                task = asyncio.create_task(openai.ChatCompletion.acreate(**chat_args))
+                cancellation_token.on_cancel(lambda: _discard_arg(task.cancel()))
+                response = None
+                with suppress(asyncio.CancelledError):
+                    response = await task
+                if cancellation_token.cancelled or response is None:
+                    return
+                assert isinstance(response, dict)
+
+                context.log.debug(f"openai.chat: {response = }", context.state.input_file_path)
+
+                if len(response["choices"]) == 1:
+                    choice = response["choices"][0]
+                    yield Message(role="assistant", name=None, content=[choice.message["content"]], async_content=None)
+                else:
+                    for i, choice in enumerate(response["choices"], start=1):
+                        yield Message(role="assistant", name=str(i), content=[choice.message["content"]], async_content=None)
+        except Exception as ex:
+            context.state.log.error("openai-chat-api-exception", f"exception while requesting a response from the API server: {repr(ex)}", context.state.input_file_path)
+            context.state.log.logger.debug(ex, exc_info=True)
+
+    def generate_responses(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
+        return self._async_response_generator(input_, cancellation_token, context)
 
 class OpenAIChatResponderPlugin(Plugin):
     def __init__(self):

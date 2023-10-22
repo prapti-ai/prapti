@@ -1,7 +1,10 @@
 """
     Test responder plugin
 """
+from typing import AsyncGenerator
+
 from pydantic import BaseModel, ConfigDict, Field
+from cancel_token import CancellationToken
 
 from ..core.plugin import Plugin, PluginCapabilities, PluginContext
 from ..core.command_message import Message
@@ -35,7 +38,7 @@ class TestResponder(Responder):
     def construct_configuration(self, context: ResponderContext) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
         return TestResponderConfiguration(), [("model", VarRef("model")), ("temperature", VarRef("temperature")), ("n", VarRef("n"))]
 
-    def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
+    async def _async_response_generator(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         plugin_config: TestResponderConfiguration = context.plugin_config
         assert plugin_config is not None
         context.log.debug(f"prapti.test.test_responder: input: {plugin_config = }", context.state.input_file_path)
@@ -52,7 +55,10 @@ class TestResponder(Responder):
 
         context.state.test_exfil["test_responder_resolved_responder_config"] = responder_config
 
-        return [Message(role="assistant", name=None, content=["Test!"])]
+        yield Message(role="assistant", name=None, content=["Test!"], async_content=None)
+
+    def generate_responses(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
+        return self._async_response_generator(input_, cancellation_token, context)
 
 class TestResponderPlugin(Plugin):
     def __init__(self):
