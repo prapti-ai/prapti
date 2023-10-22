@@ -5,9 +5,8 @@
     that run agents, tree-of-thoughts prompting routines and the like.
 """
 import abc
-from typing import Any
+from typing import Any, AsyncGenerator
 from dataclasses import dataclass
-from typing import AsyncGenerator
 
 from pydantic import BaseModel
 from cancel_token import CancellationToken

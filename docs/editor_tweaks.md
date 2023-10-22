@@ -101,4 +101,4 @@ Protect your eyes. This is a total hack, but it's in the direction of what we'd 
 This setting will apply to all content in the current workspace including new markdown documents. See the following link for more info:
 https://code.visualstudio.com/docs/languages/markdown#_markdown-preview-security
 
-> I think the correct way to do this is to implement a markdown-it plugin and put it in a [VSCode Markdown Extension](https://code.visualstudio.com/api/extension-guides/markdown-extension). But first we need to work out a minimum tranformation on the DOM to support the styling that we want. -- Ross
+> I think the correct way to do this is to implement a markdown-it plugin and put it in a [VSCode Markdown Extension](https://code.visualstudio.com/api/extension-guides/markdown-extension). But first we need to work out a minimum transformation on the DOM to support the styling that we want. -- Ross

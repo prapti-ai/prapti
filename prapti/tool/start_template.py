@@ -14,8 +14,8 @@ def locate_start_template(state: ExecutionState) -> Path:
     NOTE: If Prapti is run with the --no-default-config flag, then none of the config
     directories will be searched."""
 
-    for dir in state.prapticonfig_dirs:
-        start_template_path = dir / ".praptistart.md"
+    for dir_ in state.prapticonfig_dirs:
+        start_template_path = dir_ / ".praptistart.md"
         if start_template_path.is_file():
             return start_template_path
 
