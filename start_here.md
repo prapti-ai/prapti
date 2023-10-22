@@ -1,6 +1,6 @@
 # Your first Prapti conversation
 
- Prapti allows you to have AI conversations directly in markdown files, for example the markdown file you're reading right now. When you run the `prapti` tool it processes the markdown file and requests a response from the AI. Once the response is received `prapti` appends it to the file. It's best to have `prapti` execution bound to a hot-key (e.g. Ctrl-Enter) so you can easily run `prapti`. See the [README](README.md) to get set up.
+ Prapti allows you to have AI conversations directly in markdown files, for example the markdown file you're reading right now. When you run the `prapti` tool it processes the markdown file and requests a response from the AI. Once the response is received `prapti` appends it to the file. It's best to have `prapti` execution bound to a hot-key (e.g. Ctrl+Enter) so you can easily run `prapti`. See the [README](README.md) to get set up.
 
 > The start of the file is usually "hidden". The AI doesn't see this part. Put whatever you want here. Perhaps some notes about your goals for the conversation.
 

@@ -32,7 +32,7 @@ def make_argument_parser() -> argparse.ArgumentParser:
     # create and initialize an ArgumentParser
     result = argparse.ArgumentParser(prog="prapti", description="Prapti markdown conversations")
     result.add_argument('--version', action='version', version=f"%(prog)s {__version__}")
-    result.add_argument("--dry-run", help="prepare the LLM API request then bail", action="store_true")
+    result.add_argument("--dry-run", help="prepare the LLM API request then halt without calling the API", action="store_true")
     result.add_argument("--halt-on-error", help="halt if errors are encountered, do not attempt error recovery", action="store_true")
     result.add_argument("--no-default-config", help="disable default config file search", action="store_true")
     result.add_argument("--config-file", help="specify additional config file(s)", required=False, default=[], action="append")

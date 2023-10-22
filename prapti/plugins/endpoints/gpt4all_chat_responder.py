@@ -161,7 +161,7 @@ class GPT4AllChatResponder(Responder):
         context.log.debug(f"gpt4all.chat: {config = }", context.state.input_file_path)
 
         if context.root_config.prapti.dry_run:
-            context.log.info("gpt4all.chat-dry-run", "gpt4all.chat: dry run: bailing before hitting the GPT4All API", context.state.input_file_path)
+            context.log.info("gpt4all.chat-dry-run", "gpt4all.chat: dry run: halting before calling the GPT4All API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
             yield Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {json.dumps(config.model_dump())}"])
             return

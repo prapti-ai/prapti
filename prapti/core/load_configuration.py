@@ -119,7 +119,7 @@ def locate_and_parse_in_tree_prapticonfig_md_files(state: ExecutionState) -> tup
                 state.log.error("read-config-file-exception", f"exception while reading configuration file: {repr(ex)}", config_path)
                 state.log.logger.debug(ex, exc_info=True)
         prapticonfig_mds.append((config_path, message_sequence))
-        if message_sequence and is_config_root(message_sequence): # stop once we hit a config file with `%config_root = true`
+        if message_sequence and is_config_root(message_sequence): # stop iterating once we hit a config file with `%config_root = true`
             break
     return found_config_file, prapticonfig_mds
 
