@@ -61,10 +61,10 @@ Prapti has experimental support for GPT4All, a CPU-based LLM inference engine.
 You can use the Prapti configuration in the following markdown file as a starting point.
 
 ```
-prapti/plugins/endpoints/gpt4all_test_1.md
+prapti/plugins/endpoints/gpt4all_chat_responder.md
 ```
 
-[Or just click here](../prapti/plugins/endpoints/gpt4all_test_1.md)
+[Or just click here](../prapti/plugins/endpoints/gpt4all_chat_responder.md)
 
 The Python code that implements support for GPT4All in Prapti can be found at:
 
