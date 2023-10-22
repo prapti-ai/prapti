@@ -38,7 +38,7 @@ class EmptyResponderConfiguration(BaseModel):
 
 class NotSetType:
     """Sentinel for vars that have not been set."""
-    pass
+
 NotSet = NotSetType()
 
 @dataclass
