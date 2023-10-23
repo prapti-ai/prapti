@@ -264,9 +264,9 @@ class LocalOpenAIChatResponder(Responder):
 class LocalOpenAIChatResponderPlugin(Plugin):
     def __init__(self):
         super().__init__(
-            api_version = "0.1.0",
+            api_version = "1.0.0",
             name = "local.openai.chat",
-            version = "0.0.1",
+            version = "0.0.2",
             description = "Responder for using local LLMs that offer the OpenAI-compatible Chat Completion API",
             capabilities = PluginCapabilities.RESPONDER
         )

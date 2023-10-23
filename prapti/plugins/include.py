@@ -60,7 +60,7 @@ def include_code(name: str, raw_args: str, context: ActionContext) -> None|str|M
 class IncludePlugin(Plugin):
     def __init__(self):
         super().__init__(
-            api_version = "0.1.0",
+            api_version = "1.0.0",
             name = "prapti.include",
             version = "0.0.1",
             description = "Commands for including file contents",

@@ -289,9 +289,9 @@ class AgentsResponder(Responder):
 class AgentsPlugin(Plugin):
     def __init__(self):
         super().__init__(
-            api_version = "0.1.0",
+            api_version = "1.0.0",
             name = "prapti.experimental.agents",
-            version = "0.0.2",
+            version = "0.0.3",
             description = "Multi-agent responses",
             capabilities = PluginCapabilities.ACTIONS | PluginCapabilities.RESPONDER
         )

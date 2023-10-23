@@ -5,6 +5,7 @@ from typing import Any, AsyncGenerator
 import types
 import json
 import importlib.metadata
+from dataclasses import dataclass
 
 import pydantic
 from cancel_token import CancellationToken
@@ -21,6 +22,32 @@ from .logger import DiagnosticsLogger
 from .plugin import Plugin, PluginCapabilities, PluginContext
 
 builtin_actions: ActionNamespace = ActionNamespace()
+
+# plugin version check -------------------------------------------------------
+
+@dataclass
+class Version:
+    major: int
+    minor: int
+    patch: int
+
+def parse_semver(version: str) -> Version:
+    parts = version.split(".") # basic major.minor.patch semver only
+    return Version(major=int(parts[0]), minor=int(parts[1]), patch=int(parts[2]))
+
+def plugin_version_is_compatible(prapti_api_version: str, plugin_api_version: str):
+    """determine compatibility based on semver semantics. see https://semver.org/"""
+    prapti_api_version_v = parse_semver(prapti_api_version)
+    plugin_api_version_v = parse_semver(plugin_api_version)
+    if plugin_api_version_v.major != prapti_api_version_v.major:
+        # incompatible major API versions
+        return False
+    if plugin_api_version_v.minor > prapti_api_version_v.minor:
+        # plugin may use newer features that are unavailble in core
+        return False
+    return True
+
+PRAPTI_API_VERSION = "1.0.0"
 
 # plugin management ----------------------------------------------------------
 
@@ -49,16 +76,21 @@ loaded_plugin_entry_points: dict[str, Plugin] = {}
 
 def load_plugin_entry_point(plugin_name, source_loc: SourceLocation, log: DiagnosticsLogger) -> Plugin|None:
     result: Plugin|None = loaded_plugin_entry_points.get(plugin_name, None)
-    if not result:
+    if not result: # if not already loaded
         if plugin_entry_point := installed_plugin_entry_points.get(plugin_name, None):
             try:
                 plugin = plugin_entry_point.load()
                 if plugin.name != plugin_entry_point.name:
                     log.warning("plugin-name-inconsistency", f"plugin entry point name '{plugin_entry_point.name}' does not match plugin name '{plugin.name}'. get someone to fix the code.")
-                result = plugin
+
+                if plugin_version_is_compatible(prapti_api_version=PRAPTI_API_VERSION, plugin_api_version=plugin.api_version):
+                    result = plugin
+                else:
+                    log.error("incompatible-plugin-version", f"couldn't load plugin '{plugin_name}'. plugin API version {plugin.api_version} is not compatible with Prapti API version {PRAPTI_API_VERSION}. you need to upgrade the plugin or downgrade Prapti.")
             except Exception as ex:
-                log.error("load-plugin-entry-point-exception", f"exception while loading plugin entry point '{plugin_entry_point.name}': {repr(ex)}", source_loc)
+                log.error("load-plugin-entry-point-exception", f"couldn't load plugin '{plugin_name}'. an error occurred: exception while loading plugin entry point '{plugin_entry_point.name}': {repr(ex)}", source_loc)
                 log.logger.debug(ex, exc_info=True)
+                result = None
         else:
             log.error("plugin-not-found", f"couldn't load plugin '{plugin_name}'. plugin not found. use `%!plugins.list` to list available plugins.", source_loc)
     return result

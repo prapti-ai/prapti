@@ -63,9 +63,9 @@ class TestResponder(Responder):
 class TestResponderPlugin(Plugin):
     def __init__(self):
         super().__init__(
-            api_version = "0.1.0",
+            api_version = "1.0.0",
             name = "prapti.test.test_responder",
-            version = "0.0.1",
+            version = "0.0.2",
             description = "Responder used to test Prapti",
             capabilities = PluginCapabilities.RESPONDER
         )
