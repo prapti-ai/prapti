@@ -41,17 +41,17 @@ class TestResponder(Responder):
     async def _async_response_generator(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         plugin_config: TestResponderConfiguration = context.plugin_config
         assert plugin_config is not None
-        context.log.debug(f"prapti.test.test_responder: input: {plugin_config = }", context.state.input_file_path)
+        context.log.debug(f"input: {plugin_config = }", context.state.input_file_path)
         plugin_config = resolve_var_refs(plugin_config, context.root_config, context.log)
-        context.log.debug(f"prapti.test.test_responder: resolved: {plugin_config = }", context.state.input_file_path)
+        context.log.debug(f"resolved: {plugin_config = }", context.state.input_file_path)
 
         context.state.test_exfil["test_responder_resolved_plugin_config"] = plugin_config
 
         responder_config: TestResponderConfiguration = context.responder_config
         assert responder_config is not None
-        context.log.debug(f"prapti.test.test_responder: input: {responder_config = }", context.state.input_file_path)
+        context.log.debug(f"input: {responder_config = }", context.state.input_file_path)
         responder_config = resolve_var_refs(responder_config, context.root_config, context.log)
-        context.log.debug(f"prapti.test.test_responder: resolved: {responder_config = }", context.state.input_file_path)
+        context.log.debug(f"resolved: {responder_config = }", context.state.input_file_path)
 
         context.state.test_exfil["test_responder_resolved_responder_config"] = responder_config
 

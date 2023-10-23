@@ -7,8 +7,8 @@ import prapti.core.logger
 from prapti.core.source_location import SourceLocation
 
 @pytest.fixture(name="log", scope="function")
-def fixture_log() -> prapti.core.logger.DiagnosticsLogger:
-    return prapti.core.logger.create_diagnostics_logger()
+def fixture_log() -> prapti.core.logger.RootDiagnosticsLogger:
+    return prapti.core.logger.create_root_diagnostics_logger()
 
 def test_logger_check_caplog(caplog, log):
     """emit all message levels. check pytest caplog fixture behavior"""
@@ -130,6 +130,10 @@ def test_logger_smoke(caplog, log):
     log.detail("detail without message id")
     log.debug("debug dump without message id")
 
+    # log with scope qualifiers
+    scoped_log = prapti.core.logger.ScopedDiagnosticsLogger(log, ("scope-1", "scope-2"))
+    scoped_log.info("scoped-info-1", "info message")
+
     assert log.critical_count() == 2
     assert log.error_count() == 2
     assert log.warning_count() == 1
@@ -149,6 +153,7 @@ def test_logger_smoke(caplog, log):
         ("prapti", prapti.core.logger.DETAIL, "detail: [detail-1]: detail with message id"),
         ("prapti", prapti.core.logger.DETAIL, "detail: detail without message id"),
         ("prapti", logging.DEBUG, "debug: debug dump without message id"),
+        ("prapti", logging.INFO, "info: [scoped-info-1]: scope-1: scope-2: info message"),
     ]
     # caplog captures logging records prior to formatting. In order to test our expectations
     # regarding *formatted* output, we manually format the emitted records as part of the test.

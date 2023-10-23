@@ -12,7 +12,7 @@ from enum import Enum
 from cancel_token import CancellationToken
 
 from ..__init__ import __version__
-from ..core.logger import create_diagnostics_logger, log_levels, DiagnosticsLogger
+from ..core.logger import create_root_diagnostics_logger, log_levels, DiagnosticsLogger
 from ..core._core_execution_state import CoreExecutionState, get_private_core_state
 from ..core.execution_state import ExecutionState
 from ..core.chat_markdown_parser import parse_messages
@@ -138,7 +138,7 @@ class OutputFormatter:
                         content_yielded = True
                 except Exception as ex:
                     log.error("async-content-exception", f"response ended unexpectedly. responder emitted exception while streaming asynchronous message content: {repr(ex)}")
-                    log.logger.debug(ex, exc_info=True)
+                    log.debug_exception(ex)
 
             if m.content:
                 m.content = ["".join(m.content)] # flatten sync content after appending async content
@@ -219,7 +219,7 @@ class OutputFormatter:
                                 trailing_ws = ltext[len(lrtext):]
                 except Exception as ex:
                     log.error("async-content-exception", f"response ended unexpectedly. responder emitted exception while streaming asynchronous message content: {repr(ex)}")
-                    log.logger.debug(ex, exc_info=True)
+                    log.debug_exception(ex)
 
                 if m.content:
                     m.content = ["".join(m.content)] # flatten sync content after appending async content
@@ -264,7 +264,7 @@ def run_phase_1(argv: Sequence[str] | None = None, test_exfil: dict|None = None,
         return RunState(completed=True, result_code=ExitStatus.FAILURE.value)
 
     # construct execution state
-    state = ExecutionState(prapti_version=__version__, argv=state_argv, log=create_diagnostics_logger(initial_level=log_level), input_file_path=pathlib.Path(command_line_args.filename))
+    state = ExecutionState(prapti_version=__version__, argv=state_argv, log=create_root_diagnostics_logger(initial_level=log_level), input_file_path=pathlib.Path(command_line_args.filename))
     core_state = CoreExecutionState()
     state.private_core_state = core_state
     core_state.actions.merge(builtin_actions)
@@ -454,7 +454,7 @@ async def run_phase_2(run_state: RunState, cancellation_token: CancellationToken
             result_code = ExitStatus.FAILURE.value
     except Exception as ex:
         state.log.error("unhandled-exception", f"generation halted unexpectedly. an unhandled exception occurred: {repr(ex)}", state.input_file_path)
-        state.log.logger.error(ex, exc_info=True)
+        state.log.error_exception(ex)
     finally:
         if not end_of_output_sentinel_yielded:
             yield EndOfOutputSentinel()

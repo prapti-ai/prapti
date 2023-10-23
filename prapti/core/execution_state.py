@@ -2,7 +2,7 @@ from typing import Any
 from dataclasses import dataclass, field
 import pathlib
 
-from .logger import DiagnosticsLogger
+from .logger import RootDiagnosticsLogger
 from .configuration import RootConfiguration
 from .command_message import Message
 
@@ -14,7 +14,7 @@ class ExecutionState:
     """
     prapti_version: str
     argv: list[str]
-    log: DiagnosticsLogger
+    log: RootDiagnosticsLogger
     input_file_path: pathlib.Path
     user_prapti_config_dir: pathlib.Path|None = None # typically ~/.config/prapti but other locations are possible
     prapticonfig_dirs: list[pathlib.Path] = field(default_factory=list)

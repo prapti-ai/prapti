@@ -187,14 +187,14 @@ class AgentsResponder(Responder):
             if hasattr(context.root_config.responders, agent_name): # a responder exists with /name/
                 result.add(agent_name)
             else:
-                context.log.error("no-rexponder-for-agent", f"prapti.experimental.agents: discussion_group specifies agent '{agent_name}' but no responder exists with that name.")
+                context.log.error("no-rexponder-for-agent", f"discussion_group specifies agent '{agent_name}' but no responder exists with that name.")
         return result
 
     async def _async_response_generator(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         config: AgentsResponderConfiguration = context.responder_config
-        context.log.debug(f"prapti.experimental.agents: input: {config = }", context.state.input_file_path)
+        context.log.debug(f"input: {config = }", context.state.input_file_path)
         config = resolve_var_refs(config, context.root_config, context.log)
-        context.log.debug(f"prapti.experimental.agents: resolved: {config = }", context.state.input_file_path)
+        context.log.debug(f"resolved: {config = }", context.state.input_file_path)
 
         message_sequence = copy.deepcopy(input_)
 
@@ -202,7 +202,7 @@ class AgentsResponder(Responder):
         participants: set[str] = self._valid_discussion_group_participants(plugin_config, context)
 
         if not participants:
-            context.log.warning("agents-no-participants", "prapti.experimental.agents: could not continue discussion. no valid participants specified in discussion_group.")
+            context.log.warning("agents-no-participants", "could not continue discussion. no valid participants specified in discussion_group.")
             return
 
         all_pending_at_mentions: set[str] = self._compute_pending_at_mentions(message_sequence, context) # all @-mentions, not limited to participants or even agents/responders

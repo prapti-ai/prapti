@@ -112,7 +112,7 @@ class GitlogHooks(Hooks):
         """
         log = context.log
         log.debug("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
-        log.debug("prapti.experimental.gitlog: on_plugin_loaded")
+        log.debug("on_plugin_loaded")
         log.debug(f"{context.state.input_file_path = }")
         file_path = context.state.input_file_path.resolve()
         main_worktree_dir = file_path.parent
@@ -214,7 +214,7 @@ class GitlogHooks(Hooks):
         """
         log = context.log
         log.debug("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
-        log.debug("prapti.experimental.gitlog: on_response_completed")
+        log.debug("on_response_completed")
         log.debug(f"{context.state.input_file_path = }")
 
         main_worktree_dir = context.state.input_file_path.resolve().parent

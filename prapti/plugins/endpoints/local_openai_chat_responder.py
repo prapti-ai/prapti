@@ -107,7 +107,7 @@ def convert_message_sequence_to_openai_messages(message_sequence: list[Message],
             log.warning("unrecognised-public-role", f"message will not be included in LLM prompt. public role '{message.role}' is not recognised.", message.source_loc)
             continue
 
-        assert len(message.content) == 1 and isinstance(message.content[0], str), "local.openai.chat: expected flattened message content"
+        assert len(message.content) == 1 and isinstance(message.content[0], str), "expected flattened message content"
         m = {
             "role": message.role,
             "content": message.content[0]
@@ -186,9 +186,9 @@ class LocalOpenAIChatResponder(Responder):
 
     async def _async_response_generator(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         config: LocalOpenAIChatResponderConfiguration = context.responder_config
-        context.log.debug(f"local.openai.chat: input: {config = }", context.state.input_file_path)
+        context.log.debug(f"input: {config = }", context.state.input_file_path)
         config = resolve_var_refs(config, context.root_config, context.log)
-        context.log.debug(f"local.openai.chat: resolved: {config = }", context.state.input_file_path)
+        context.log.debug(f"resolved: {config = }", context.state.input_file_path)
 
         openai.api_key = "NONE"
         openai.organization = "NONE"
@@ -198,14 +198,14 @@ class LocalOpenAIChatResponder(Responder):
 
         messages = convert_message_sequence_to_openai_messages(input_, context.log)
 
-        context.log.debug(f"local.openai.chat: final: {config = }")
+        context.log.debug(f"final: {config = }")
         chat_args = config.model_dump(exclude_none=True, exclude_defaults=True)
         chat_args["model"] = config.model # include model, even if it was left at default
-        context.log.debug(f"local.openai.chat: {chat_args = }")
+        context.log.debug(f"{chat_args = }")
         chat_args["messages"] = messages
 
         if context.root_config.prapti.dry_run:
-            context.log.info("openai.chat-dry-run", "local.openai.chat: dry run: halting before calling the OpenAI API", context.state.input_file_path)
+            context.log.info("openai.chat-dry-run", "dry run: halting before calling the OpenAI API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
             chat_args["messages"] = ["..."] # avoid overly long output
             yield Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nchat_args = {json.dumps(chat_args)}"])
@@ -246,7 +246,7 @@ class LocalOpenAIChatResponder(Responder):
                     return
                 assert isinstance(response, dict)
 
-                context.log.debug(f"local.openai.chat: {response = }", context.state.input_file_path)
+                context.log.debug(f"{response = }", context.state.input_file_path)
 
                 if len(response["choices"]) == 1:
                     choice = response["choices"][0]
@@ -256,7 +256,7 @@ class LocalOpenAIChatResponder(Responder):
                         yield Message(role="assistant", name=str(i), content=[choice.message["content"]], async_content=None)
         except Exception as ex:
             context.state.log.error("local-openai-chat-api-exception", f"exception while requesting a response from the API server: {repr(ex)}", context.state.input_file_path)
-            context.state.log.logger.debug(ex, exc_info=True)
+            context.state.log.debug_exception(ex)
 
     def generate_responses(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         return self._async_response_generator(input_, cancellation_token, context)

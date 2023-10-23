@@ -33,6 +33,6 @@ def get_start_template(state: ExecutionState) -> str:
         result = start_template_path.read_text(encoding="utf-8")
     except Exception as ex:
         state.log.error("start-template-exception", f"exception while reading start template: {repr(ex)}", start_template_path)
-        state.log.logger.debug(ex, exc_info=True)
+        state.log.debug_exception(ex)
         result = FALLBACK_START_TEMPLATE
     return result

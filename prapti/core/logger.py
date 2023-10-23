@@ -24,6 +24,7 @@ from typing import Any
 import logging
 import pathlib
 import sys
+import abc
 from .source_location import SourceLocation
 
 # Add HINT and DETAIL logging levels, without monkey patching anything.
@@ -58,7 +59,46 @@ log_levels = {
     'DEBUG': logging.DEBUG,
 }
 
-class DiagnosticsLogger:
+class DiagnosticsLogger(metaclass=abc.ABCMeta):
+    """Ergonomic facade for logging compiler-style diagnostic messages."""
+    @abc.abstractmethod
+    def critical(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        pass
+
+    @abc.abstractmethod
+    def error(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        pass
+
+    @abc.abstractmethod
+    def warning(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        pass
+
+    @abc.abstractmethod
+    def hint(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        pass
+
+    @abc.abstractmethod
+    def info(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        pass
+
+    @abc.abstractmethod
+    def detail(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        pass
+
+    @abc.abstractmethod
+    def debug(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        pass
+
+    @abc.abstractmethod
+    def error_exception(self, ex: BaseException):
+        pass
+
+    @abc.abstractmethod
+    def debug_exception(self, ex: BaseException):
+        pass
+
+
+class RootDiagnosticsLogger(DiagnosticsLogger):
     """Ergonomic facade for logging compiler-style diagnostic messages.
     - Requires message ids for INFO and above.
     - Supports a range of source location arguments.
@@ -86,7 +126,7 @@ class DiagnosticsLogger:
             - source_line # 1-based
             - source_column # 1-based
         """
-        file_path, line, column = None, None, None
+        file_path, line, column, scopes = None, None, None, None
 
         for obj in extras:
             if isinstance(obj, SourceLocation):
@@ -103,6 +143,8 @@ class DiagnosticsLogger:
                 line = value
             elif name == "column":
                 column = value
+            elif name == "scopes":
+                scopes = value
             else:
                 assert False, f"unrecognised keyword extra log argument {name} = {repr(value)}"
 
@@ -112,6 +154,8 @@ class DiagnosticsLogger:
             extras_dict['source_line'] = line
         if column is not None:
             extras_dict['source_column'] = column
+        if scopes is not None:
+            extras_dict['scopes'] = scopes
 
     def _make_extra(self, message_id, extras: tuple[Any, ...], kwextras: dict[str, Any]) -> dict[str, Any]:
         extras_dict: dict[str, Any] = {'message_id': message_id}
@@ -170,6 +214,53 @@ class DiagnosticsLogger:
     def debug(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
         self._log(logging.DEBUG, msg_id_or_msg, msg_and_or_extras, kwextras)
 
+    def error_exception(self, ex: BaseException):
+        self.logger.error(ex, exc_info=True)
+
+    def debug_exception(self, ex: BaseException):
+        self.logger.debug(ex, exc_info=True)
+
+
+class ScopedDiagnosticsLogger(DiagnosticsLogger):
+    """decorator/wrapper logger that prepends scopes to log messages"""
+    def __init__(self, sink: DiagnosticsLogger, scopes: tuple[str,...]|str):
+        self.sink = sink
+        self.scopes = scopes if isinstance(scopes, tuple) else (scopes,)
+
+    def _add_scopes(self, kwextras: dict[str, Any]) -> dict[str, Any]:
+        if "scopes" in kwextras:
+            kwextras["scopes"] = self.scopes +  kwextras["scopes"]
+        else:
+            kwextras["scopes"] = self.scopes
+        return kwextras
+
+    def critical(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self.sink.critical(msg_id_or_msg, *msg_and_or_extras, **self._add_scopes(kwextras))
+
+    def error(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self.sink.error(msg_id_or_msg, *msg_and_or_extras, **self._add_scopes(kwextras))
+
+    def warning(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self.sink.warning(msg_id_or_msg, *msg_and_or_extras, **self._add_scopes(kwextras))
+
+    def hint(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self.sink.hint(msg_id_or_msg, *msg_and_or_extras, **self._add_scopes(kwextras))
+
+    def info(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self.sink.info(msg_id_or_msg, *msg_and_or_extras, **self._add_scopes(kwextras))
+
+    def detail(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self.sink.detail(msg_id_or_msg, *msg_and_or_extras, **self._add_scopes(kwextras))
+
+    def debug(self, msg_id_or_msg: str, *msg_and_or_extras, **kwextras):
+        self.sink.debug(msg_id_or_msg, *msg_and_or_extras, **self._add_scopes(kwextras))
+
+    def error_exception(self, ex: BaseException):
+        self.sink.error_exception(ex)
+
+    def debug_exception(self, ex: BaseException):
+        self.sink.debug_exception(ex)
+
 
 class DiagnosticRecordFormatter(logging.Formatter):
     """Format log messages in a compiler-like format for console display."""
@@ -192,15 +283,16 @@ class DiagnosticRecordFormatter(logging.Formatter):
             message_id= None
 
         message = record.__dict__['message']
+        scopes = record.__dict__.get('scopes', tuple())
 
         # filename:ln:col: level: [message_id]: ... message goes here ...
         if message:
-            return ": ".join(s for s in (source_location_str, levelname, message_id, message) if s)
+            return ": ".join(s for s in (source_location_str, levelname, message_id) + scopes + (message,) if s)
         else:
-            return ": ".join(s for s in (source_location_str, levelname, message_id) if s) + ":"
+            return ": ".join(s for s in (source_location_str, levelname, message_id) + scopes if s) + ":"
 
 
-def create_diagnostics_logger(initial_level=logging.DEBUG) -> DiagnosticsLogger:
+def create_root_diagnostics_logger(initial_level=logging.DEBUG) -> RootDiagnosticsLogger:
     logger = logging.getLogger(name='prapti')
     logger.setLevel(initial_level)
     if not logger.handlers:
@@ -210,4 +302,4 @@ def create_diagnostics_logger(initial_level=logging.DEBUG) -> DiagnosticsLogger:
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 
-    return DiagnosticsLogger(logger=logger)
+    return RootDiagnosticsLogger(logger=logger)

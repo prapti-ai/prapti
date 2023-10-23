@@ -36,7 +36,7 @@ def load_config_file(config_path: pathlib.Path, state: ExecutionState) -> bool:
             parse_messages_and_interpret_commands(config_file_lines, config_path, state)
         except Exception as ex:
             state.log.error("config-file-exception", f"exception while loading configuration file: {repr(ex)}", config_path)
-            state.log.logger.debug(ex, exc_info=True)
+            state.log.debug_exception(ex)
         return True
     return False
 
@@ -117,7 +117,7 @@ def locate_and_parse_in_tree_prapticonfig_md_files(state: ExecutionState) -> tup
                 message_sequence = parse_messages(config_file_lines, config_path)
             except Exception as ex:
                 state.log.error("read-config-file-exception", f"exception while reading configuration file: {repr(ex)}", config_path)
-                state.log.logger.debug(ex, exc_info=True)
+                state.log.debug_exception(ex)
         prapticonfig_mds.append((config_path, message_sequence))
         if message_sequence and is_config_root(message_sequence): # stop iterating once we hit a config file with `%config_root = true`
             break
@@ -138,7 +138,7 @@ def execute_in_tree_prapticonfig_md_files(prapticonfig_mds: list[tuple[pathlib.P
                 state.root_config.prapti.config_root = False
             except Exception as ex:
                 state.log.error("load-config-file-exception", f"exception while loading configuration file: {repr(ex)}", config_path)
-                state.log.logger.debug(ex, exc_info=True)
+                state.log.debug_exception(ex)
 
 def default_load_config_files(state: ExecutionState):
     """Default configuration loading. Load configuration from:

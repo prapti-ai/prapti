@@ -30,7 +30,8 @@ def run_action(has_exclamation: bool, action_name: str, raw_args: str, source_lo
                 state.log.error("excl-only-action-without-excl", f"didn't run action '{action_name}'. action is !-only but written without a '!'", source_loc)
                 return None
 
-            context = ActionContext(state=state, root_config=state.root_config, plugin_config=action.plugin_config, source_loc=source_loc, log=state.log)
+            action_log = action.plugin_log if action.plugin_log else state.log
+            context = ActionContext(state=state, root_config=state.root_config, plugin_config=action.plugin_config, source_loc=source_loc, log=action_log)
             return action.function(action_name, raw_args, context)
         case _:
             alternatives = _join_alternatives([action.qualified_name for action in matches])
