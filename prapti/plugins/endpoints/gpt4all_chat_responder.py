@@ -202,9 +202,9 @@ class GPT4AllChatResponder(Responder):
 class GPT4AllChatResponderPlugin(Plugin):
     def __init__(self):
         super().__init__(
-            api_version = "0.1.0",
+            api_version = "1.0.0",
             name = "experimental.gpt4all.chat",
-            version = "0.0.1",
+            version = "0.0.2",
             description = "Responder using the GPT4All Chat Completion API",
             capabilities = PluginCapabilities.RESPONDER
         )

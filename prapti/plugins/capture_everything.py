@@ -152,7 +152,7 @@ class CaptureEverythingHooks(Hooks):
 class CaptureEverythingPlugin(Plugin):
     def __init__(self):
         super().__init__(
-            api_version = "0.1.0",
+            api_version = "1.0.0",
             name = "prapti.capture_everything",
             version = "0.0.1",
             description = "Automatically capture each prapti run to a file",

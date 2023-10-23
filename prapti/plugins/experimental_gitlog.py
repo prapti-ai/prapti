@@ -230,7 +230,7 @@ class GitlogHooks(Hooks):
 class GitlogPlugin(Plugin):
     def __init__(self):
         super().__init__(
-            api_version = "0.1.0",
+            api_version = "1.0.0",
             name = "prapti.experimental.gitlog",
             version = "0.0.1",
             description = "Hooks for git conversation tracking",

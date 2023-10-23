@@ -19,7 +19,7 @@ class TestConfigConfiguration(BaseModel):
 class TestConfigPlugin(Plugin):
     def __init__(self):
         super().__init__(
-            api_version = "0.1.0",
+            api_version = "1.0.0",
             name = "prapti.test.test_config",
             version = "0.0.1",
             description = "Plugin used to test Prapti",
