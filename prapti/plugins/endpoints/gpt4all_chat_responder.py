@@ -21,6 +21,7 @@ import json
 from typing import AsyncGenerator, Iterable
 from enum import Enum
 import asyncio
+import sys
 
 from pydantic import BaseModel, Field, ConfigDict
 from cancel_token import CancellationToken
@@ -132,7 +133,7 @@ def _sync_generator_to_queue(sync_generator: Iterable[str], queue: asyncio.Queue
     finally:
         loop.call_soon_threadsafe(queue.put_nowait, QueueSentinel.END_OF_RESPONSE)
 
-async def _generate_async_content(sync_generator: Iterable[str], cancellation_token: CancellationToken) -> AsyncGenerator[str, None]:
+async def _generate_async_content(sync_generator: Iterable[str], completion_sem: asyncio.Semaphore, cancellation_token: CancellationToken) -> AsyncGenerator[str, None]:
     queue: asyncio.Queue[str|QueueSentinel] = asyncio.Queue(maxsize=0) # unbounded
     thread_task = asyncio.create_task(asyncio.to_thread(_sync_generator_to_queue, sync_generator, queue, asyncio.get_event_loop(), cancellation_token))
 
@@ -143,6 +144,45 @@ async def _generate_async_content(sync_generator: Iterable[str], cancellation_to
         yield s
 
     await thread_task
+    completion_sem.release()
+
+# keep the most recently accessed model in memory to speed up subsequent responses
+# TODO: unload the model after some timeout
+# TODO: provide ?plugin-level setting to configure timeout and number of models to retain
+_cached_model_lock = asyncio.Lock() # used to gate access so that only a single model is in use at any time
+                                    # for example during multiple concurrent runs in a language server
+_cached_model: gpt4all.GPT4All|None = None
+_cached_model_key: tuple|None = None
+
+async def _load_model(config: GPT4AllResponderConfiguration) -> gpt4all.GPT4All:
+    global _cached_model, _cached_model_key
+
+    n_threads = config.n_threads if (config.n_threads and config.n_threads > 0) else None
+    key = (config.model_name, config.model_path, n_threads)
+
+    if _cached_model and _cached_model_key == key:
+        return _cached_model
+
+    # unload existing model before loading the new one to limit memory usage
+    if _cached_model:
+        del _cached_model
+        _cached_model = None
+        _cached_model_key = None
+
+    sys.stdout.flush()
+    sys.stderr.flush()
+    model = await asyncio.to_thread(gpt4all.GPT4All, # run on a separate thread to avoid blocking the language server
+            model_name = config.model_name,
+            model_path = config.model_path,
+            model_type = None, # currently unused
+            allow_download = False,
+            n_threads = n_threads)
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+    _cached_model = model
+    _cached_model_key = key
+    return model
 
 class GPT4AllChatResponder(Responder):
     def __init__(self):
@@ -167,31 +207,30 @@ class GPT4AllChatResponder(Responder):
             return
 
         prompt = convert_message_sequence_to_text_prompt(input_, context.log)
-
-        context.log.info("gpt4all-loading-model", "gpt4all.chat: loading model. please wait...", context.state.input_file_path)
-
-        model = await asyncio.to_thread(gpt4all.GPT4All,
-            model_name = config.model_name,
-            model_path = config.model_path,
-            model_type = None, # currently unused
-            allow_download = False,
-            n_threads = config.n_threads if (config.n_threads and config.n_threads > 0) else None)
-        if cancellation_token.cancelled:
-            return
-
         generate_args = config.model_dump(include=_generate_arg_names)
 
-        context.log.info("gpt4all-generating", "gpt4all.chat: generating...", context.state.input_file_path)
+        async with _cached_model_lock: # prevent overlapping inference runs
+            context.log.info("gpt4all-loading-model", "gpt4all.chat: loading model. please wait...", context.state.input_file_path)
+            model = await _load_model(config)
+            if cancellation_token.cancelled:
+                return
 
-        context.log.debug(f"gpt4all.chat: {generate_args = }", context.state.input_file_path)
-        response = await asyncio.to_thread(model.generate, prompt=prompt, **generate_args)
+            context.log.info("gpt4all-generating", "gpt4all.chat: generating...", context.state.input_file_path)
 
-        if isinstance(response, str):
-            context.log.debug("gpt4all.chat: got non-streaming response", context.state.input_file_path)
-            yield Message(role="assistant", name=None, content=[response], async_content=None)
-        else:
-            context.log.info("gpt4all-streaming-generation", "gpt4all.chat: streaming generation...", context.state.input_file_path)
-            yield Message(role="assistant", name=None, content=[], async_content=_generate_async_content(response, cancellation_token))
+            context.log.debug(f"gpt4all.chat: {generate_args = }", context.state.input_file_path)
+            response = await asyncio.to_thread(model.generate, prompt=prompt, **generate_args)
+            if cancellation_token.cancelled:
+                return
+
+            if isinstance(response, str):
+                context.log.debug("gpt4all.chat: got non-streaming response", context.state.input_file_path)
+                yield Message(role="assistant", name=None, content=[response], async_content=None)
+            else:
+                context.log.info("gpt4all-streaming-generation", "gpt4all.chat: streaming generation...", context.state.input_file_path)
+                async_content_completion_sem = asyncio.Semaphore(value=0)
+                yield Message(role="assistant", name=None, content=[], async_content=_generate_async_content(response, async_content_completion_sem, cancellation_token))
+                # don't release _cached_model_lock untill async generation has completed:
+                await async_content_completion_sem.acquire()
 
     def generate_responses(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         return self._async_response_generator(input_, cancellation_token, context)
@@ -204,7 +243,7 @@ class GPT4AllChatResponderPlugin(Plugin):
         super().__init__(
             api_version = "1.0.0",
             name = "experimental.gpt4all.chat",
-            version = "0.0.2",
+            version = "0.0.3",
             description = "Responder using the GPT4All Chat Completion API",
             capabilities = PluginCapabilities.RESPONDER
         )
