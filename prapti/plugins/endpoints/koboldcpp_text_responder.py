@@ -59,7 +59,7 @@ def convert_message_sequence_to_text_prompt(message_sequence: list[Message], log
             continue # skip disabled and hidden messages
 
         if message.role == "prompt":
-            assert len(message.content) == 1 and isinstance(message.content[0], str), "koboldcpp.text: internal error. expected flattened message content"
+            assert len(message.content) == 1 and isinstance(message.content[0], str), "internal error. expected flattened message content"
             result += message.content[0]
         elif message.role in ("user", "assistant"):
             log.warning("unsupported-chat-role", f"message will not be included in LLM prompt. role '{message.role}' is not supported. use '### @prompt:'.", message.source_loc)
@@ -178,23 +178,23 @@ class KoboldcppResponder(Responder):
 
     async def _async_response_generator(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         config: KoboldcppResponderConfiguration = context.responder_config
-        context.log.debug(f"koboldcpp.text: input: {config = }", context.state.input_file_path)
+        context.log.debug(f"input: {config = }", context.state.input_file_path)
         config = resolve_var_refs(config, context.root_config, context.log)
-        context.log.debug(f"koboldcpp.text: resolved: {config = }", context.state.input_file_path)
+        context.log.debug(f"resolved: {config = }", context.state.input_file_path)
 
         prompt = convert_message_sequence_to_text_prompt(input_, context.log)
         if not prompt:
-            context.log.error("koboldcpp.text: can't generate completion. prompt is empty.")
+            context.log.error("can't generate completion. prompt is empty.")
             return
 
         if context.root_config.prapti.dry_run:
-            context.log.info("koboldcpp-text-dry-run", "koboldcpp.text: dry run: halting before calling the Kobold API", context.state.input_file_path)
+            context.log.info("koboldcpp-text-dry-run", "dry run: halting before calling the Kobold API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
             yield Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {json.dumps(config.model_dump())}"])
             return
 
         generate_args = config.model_dump(exclude_none=True, exclude_defaults=True)
-        context.log.debug(f"koboldcpp.text: {generate_args = }")
+        context.log.debug(f"{generate_args = }")
 
         if cancellation_token.cancelled:
             return
@@ -216,7 +216,7 @@ class KoboldcppResponder(Responder):
 
         except Exception as ex:
             context.state.log.error("koboldcpp-text-api-exception", f"exception while requesting a response from koboldcpp: {repr(ex)}", context.state.input_file_path)
-            context.state.log.logger.debug(ex, exc_info=True)
+            context.state.log.debug_exception(ex)
 
     def generate_responses(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         return self._async_response_generator(input_, cancellation_token, context)

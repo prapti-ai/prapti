@@ -27,6 +27,7 @@ class Action:
     function: Callable[[str, str, ActionContext], None|str|Message]
     exclamation_only: bool = False # !-only commands may only appear in markdown with the ! prefix
     plugin_config: Any|None = None
+    plugin_log: DiagnosticsLogger|None = None
 
 class ActionNamespace:
     def __init__(self):
@@ -59,10 +60,11 @@ class ActionNamespace:
             return func
         return decorator
 
-    def set_plugin_config(self, plugin_config: Any):
+    def set_plugin_config_and_log(self, plugin_config: Any, plugin_log: DiagnosticsLogger):
         for _,v in self._actions.items():
             for action in v:
                 action.plugin_config = plugin_config
+                action.plugin_log = plugin_log
 
     def lookup_action(self, name: str) -> list[Action]:
         name_components = name.split('.')

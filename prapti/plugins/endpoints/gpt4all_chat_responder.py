@@ -49,7 +49,7 @@ def convert_message_sequence_to_text_prompt(message_sequence: list[Message], log
         # HACK WARNING: not all LLMs use the same chat structure delimiters.
         # the following format will perform badly if it is not consistent with the fine-tuning of the selected model.
         # ideally, we will delegate chat structure formatting to our dependencies.
-        assert len(message.content) == 1 and isinstance(message.content[0], str), "gpt4all.chat: internal error. expected flattened message content"
+        assert len(message.content) == 1 and isinstance(message.content[0], str), "internal error. expected flattened message content"
         match message.role:
             case "system":
                 result += "### Instruction:\n"
@@ -198,10 +198,10 @@ class GPT4AllChatResponder(Responder):
     async def _async_response_generator(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         config: GPT4AllResponderConfiguration = context.responder_config
         config = resolve_var_refs(config, context.root_config, context.log)
-        context.log.debug(f"gpt4all.chat: {config = }", context.state.input_file_path)
+        context.log.debug(f"{config = }", context.state.input_file_path)
 
         if context.root_config.prapti.dry_run:
-            context.log.info("gpt4all.chat-dry-run", "gpt4all.chat: dry run: halting before calling the GPT4All API", context.state.input_file_path)
+            context.log.info("gpt4all.chat-dry-run", "dry run: halting before calling the GPT4All API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
             yield Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nconfig = {json.dumps(config.model_dump())}"])
             return
@@ -210,23 +210,23 @@ class GPT4AllChatResponder(Responder):
         generate_args = config.model_dump(include=_generate_arg_names)
 
         async with _cached_model_lock: # prevent overlapping inference runs
-            context.log.info("gpt4all-loading-model", "gpt4all.chat: loading model. please wait...", context.state.input_file_path)
+            context.log.info("gpt4all-loading-model", "loading model. please wait...", context.state.input_file_path)
             model = await _load_model(config)
             if cancellation_token.cancelled:
                 return
 
-            context.log.info("gpt4all-generating", "gpt4all.chat: generating...", context.state.input_file_path)
+            context.log.info("gpt4all-generating", "generating...", context.state.input_file_path)
 
-            context.log.debug(f"gpt4all.chat: {generate_args = }", context.state.input_file_path)
+            context.log.debug(f"{generate_args = }", context.state.input_file_path)
             response = await asyncio.to_thread(model.generate, prompt=prompt, **generate_args)
             if cancellation_token.cancelled:
                 return
 
             if isinstance(response, str):
-                context.log.debug("gpt4all.chat: got non-streaming response", context.state.input_file_path)
+                context.log.debug("got non-streaming response", context.state.input_file_path)
                 yield Message(role="assistant", name=None, content=[response], async_content=None)
             else:
-                context.log.info("gpt4all-streaming-generation", "gpt4all.chat: streaming generation...", context.state.input_file_path)
+                context.log.info("gpt4all-streaming-generation", "streaming generation...", context.state.input_file_path)
                 async_content_completion_sem = asyncio.Semaphore(value=0)
                 yield Message(role="assistant", name=None, content=[], async_content=_generate_async_content(response, async_content_completion_sem, cancellation_token))
                 # don't release _cached_model_lock untill async generation has completed:

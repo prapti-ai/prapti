@@ -18,7 +18,7 @@ from .action import ActionNamespace, ActionContext
 from .responder import ResponderContext
 from .hooks import Hooks, HooksContext
 from .source_location import SourceLocation
-from .logger import DiagnosticsLogger
+from .logger import DiagnosticsLogger, ScopedDiagnosticsLogger
 from .plugin import Plugin, PluginCapabilities, PluginContext
 
 builtin_actions: ActionNamespace = ActionNamespace()
@@ -89,7 +89,7 @@ def load_plugin_entry_point(plugin_name, source_loc: SourceLocation, log: Diagno
                     log.error("incompatible-plugin-version", f"couldn't load plugin '{plugin_name}'. plugin API version {plugin.api_version} is not compatible with Prapti API version {PRAPTI_API_VERSION}. you need to upgrade the plugin or downgrade Prapti.")
             except Exception as ex:
                 log.error("load-plugin-entry-point-exception", f"couldn't load plugin '{plugin_name}'. an error occurred: exception while loading plugin entry point '{plugin_entry_point.name}': {repr(ex)}", source_loc)
-                log.logger.debug(ex, exc_info=True)
+                log.debug_exception(ex)
                 result = None
         else:
             log.error("plugin-not-found", f"couldn't load plugin '{plugin_name}'. plugin not found. use `%!plugins.list` to list available plugins.", source_loc)
@@ -100,7 +100,8 @@ def load_plugin(plugin: Plugin, source_loc: SourceLocation, state: ExecutionStat
     try:
         core_state = get_private_core_state(state)
 
-        plugin_context = PluginContext(state=state, plugin_name=plugin.name, root_config=state.root_config, plugin_config=None, log=state.log)
+        plugin_log = ScopedDiagnosticsLogger(sink=state.log, scopes=(plugin.name,))
+        plugin_context = PluginContext(state=state, plugin_name=plugin.name, root_config=state.root_config, plugin_config=None, log=plugin_log)
         plugin_context.plugin_config = setup_newly_constructed_config(plugin.construct_configuration(plugin_context), empty_factory=EmptyPluginConfiguration, root_config=state.root_config, log=state.log)
         plugin_actions: ActionNamespace|None = plugin.construct_actions(plugin_context) if PluginCapabilities.ACTIONS in plugin.capabilities else None
         plugin_hooks: Hooks|None = plugin.construct_hooks(plugin_context) if PluginCapabilities.HOOKS in plugin.capabilities else None
@@ -120,18 +121,18 @@ def load_plugin(plugin: Plugin, source_loc: SourceLocation, state: ExecutionStat
         setattr(config_attach_point, plugin_name, plugin_context.plugin_config)
 
         if plugin_actions:
-            plugin_actions.set_plugin_config(plugin_context.plugin_config)
+            plugin_actions.set_plugin_config_and_log(plugin_context.plugin_config, plugin_context.log)
             core_state.actions.merge(plugin_actions)
 
         core_state.loaded_plugins[plugin.name] = plugin
 
         if plugin_hooks:
-            hooks_context = HooksContext(state=state, root_config=state.root_config, plugin_config=plugin_context.plugin_config, hooks=plugin_hooks, log=state.log)
+            hooks_context = HooksContext(state=state, root_config=state.root_config, plugin_config=plugin_context.plugin_config, hooks=plugin_hooks, log=plugin_context.log)
             plugin_hooks.on_plugin_loaded(hooks_context)
             core_state.hooks_distributor.add_hooks(hooks_context)
     except Exception as ex:
         state.log.error("load-plugin-exception", f"exception while loading plugin '{plugin.name}': {repr(ex)}", source_loc)
-        state.log.logger.debug(ex, exc_info=True)
+        state.log.debug_exception(ex)
 
 def load_plugin_by_name(plugin_name: str, source_loc: SourceLocation, state: ExecutionState) -> None:
     core_state = get_private_core_state(state)
@@ -217,14 +218,15 @@ def responder_new(name: str, raw_args: str, context: ActionContext) -> None|str|
     if plugin := core_state.loaded_plugins.get(plugin_name, None):
         if PluginCapabilities.RESPONDER in plugin.capabilities:
             plugin_config = get_subobject(context.root_config.plugins, plugin_name, None)
+            plugin_log = ScopedDiagnosticsLogger(sink=context.state.log, scopes=(plugin.name,))
             plugin_context = PluginContext(
                     state=context.state, plugin_name=plugin_name,
-                    root_config=context.root_config, plugin_config=plugin_config, log=context.log)
+                    root_config=context.root_config, plugin_config=plugin_config, log=plugin_log)
             if responder := plugin.construct_responder(plugin_context):
                 responder_context = ResponderContext(
                         state=context.state, plugin_name=plugin_name,
                         root_config=context.root_config, plugin_config=plugin_config, responder_config=None,
-                        responder_name=responder_name, responder=responder, log=context.log)
+                        responder_name=responder_name, responder=responder, log=plugin_context.log)
                 responder_context.responder_config = setup_newly_constructed_config(responder.construct_configuration(responder_context), empty_factory=EmptyResponderConfiguration, root_config=context.root_config, log=context.log)
                 core_state.responder_contexts[responder_name] = responder_context
                 setattr(context.root_config.responders, responder_name, responder_context.responder_config)

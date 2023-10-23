@@ -188,7 +188,7 @@ def convert_message_sequence_to_openai_messages(message_sequence: list[Message],
             log.warning("unrecognised-public-role", f"message will not be included in LLM prompt. public role '{message.role}' is not recognised.", message.source_loc)
             continue
 
-        assert len(message.content) == 1 and isinstance(message.content[0], str), "openai.chat: expected flattened message content"
+        assert len(message.content) == 1 and isinstance(message.content[0], str), "expected flattened message content"
         m = {
             "role": message.role,
             "content": message.content[0]
@@ -270,9 +270,9 @@ class OpenAIChatResponder(Responder):
 
     async def _async_response_generator(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         config: OpenAIChatResponderConfiguration = context.responder_config
-        context.log.debug(f"openai.chat: input: {config = }", context.state.input_file_path)
+        context.log.debug(f"input: {config = }", context.state.input_file_path)
         config = resolve_var_refs(config, context.root_config, context.log)
-        context.log.debug(f"openai.chat: resolved: {config = }", context.state.input_file_path)
+        context.log.debug(f"resolved: {config = }", context.state.input_file_path)
 
         openai_globals.restore_openai_globals(self._openai_globals)
 
@@ -281,25 +281,25 @@ class OpenAIChatResponder(Responder):
         if config.max_tokens is not None: # i.e. if we're not using the default
             # clamp requested completion token count to avoid API error if we ask for more than can be provided
             prompt_token_count = num_tokens_from_messages(messages, model=config.model, log=context.log)
-            context.log.debug(f"openai.chat: {prompt_token_count = }", context.state.input_file_path)
+            context.log.debug(f"{prompt_token_count = }", context.state.input_file_path)
             model_token_limit = get_model_token_limit(config.model)
             # NB: config.max_tokens is the maximum response tokens
             if prompt_token_count + config.max_tokens > model_token_limit:
                 config.max_tokens = model_token_limit - prompt_token_count
                 if config.max_tokens > 0:
-                    context.log.info("openai.chat-clamping-max-tokens", f"openai.chat: clamping requested completion to {config.max_tokens} max tokens", context.state.input_file_path)
+                    context.log.info("openai.chat-clamping-max-tokens", f"clamping requested completion to {config.max_tokens} max tokens", context.state.input_file_path)
                 else:
-                    context.log.info("openai.chat-at-token-limit", "openai.chat: token limit reached. exiting", context.state.input_file_path)
+                    context.log.info("openai.chat-at-token-limit", "token limit reached. exiting", context.state.input_file_path)
                     return
 
-        context.log.debug(f"openai.chat: final: {config = }")
+        context.log.debug(f"final: {config = }")
         chat_args = config.model_dump(exclude_none=True, exclude_defaults=True)
         chat_args["model"] = config.model # include model, even if it was left at default
-        context.log.debug(f"openai.chat: {chat_args = }")
+        context.log.debug(f"{chat_args = }")
         chat_args["messages"] = messages
 
         if context.root_config.prapti.dry_run:
-            context.log.info("openai.chat-dry-run", "openai.chat: dry run: halting before calling the OpenAI API", context.state.input_file_path)
+            context.log.info("openai.chat-dry-run", "dry run: halting before calling the OpenAI API", context.state.input_file_path)
             current_time = str(datetime.datetime.now())
             chat_args["messages"] = ["..."] # avoid overly long output
             yield Message(role="assistant", name=None, content=[f"dry run mode. {current_time}\nchat_args = {json.dumps(chat_args)}"])
@@ -340,7 +340,7 @@ class OpenAIChatResponder(Responder):
                     return
                 assert isinstance(response, dict)
 
-                context.log.debug(f"openai.chat: {response = }", context.state.input_file_path)
+                context.log.debug(f"{response = }", context.state.input_file_path)
 
                 if len(response["choices"]) == 1:
                     choice = response["choices"][0]
@@ -350,7 +350,7 @@ class OpenAIChatResponder(Responder):
                         yield Message(role="assistant", name=str(i), content=[choice.message["content"]], async_content=None)
         except Exception as ex:
             context.state.log.error("openai-chat-api-exception", f"exception while requesting a response from the API server: {repr(ex)}", context.state.input_file_path)
-            context.state.log.logger.debug(ex, exc_info=True)
+            context.state.log.debug_exception(ex)
 
     def generate_responses(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         return self._async_response_generator(input_, cancellation_token, context)
