@@ -215,8 +215,8 @@ class KoboldcppResponder(Responder):
                     yield await task
 
         except Exception as ex:
-            context.state.log.error("koboldcpp-text-api-exception", f"exception while requesting a response from koboldcpp: {repr(ex)}", context.state.input_file_path)
-            context.state.log.debug_exception(ex)
+            context.log.error("koboldcpp-text-api-exception", f"exception while requesting a response from koboldcpp: {repr(ex)}", context.state.input_file_path)
+            context.log.debug_exception(ex)
 
     def generate_responses(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         return self._async_response_generator(input_, cancellation_token, context)

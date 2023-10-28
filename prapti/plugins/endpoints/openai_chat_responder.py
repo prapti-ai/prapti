@@ -349,8 +349,8 @@ class OpenAIChatResponder(Responder):
                     for i, choice in enumerate(response["choices"], start=1):
                         yield Message(role="assistant", name=str(i), content=[choice.message["content"]], async_content=None)
         except Exception as ex:
-            context.state.log.error("openai-chat-api-exception", f"exception while requesting a response from the API server: {repr(ex)}", context.state.input_file_path)
-            context.state.log.debug_exception(ex)
+            context.log.error("openai-chat-api-exception", f"exception while requesting a response from the API server: {repr(ex)}", context.state.input_file_path)
+            context.log.debug_exception(ex)
 
     def generate_responses(self, input_: list[Message], cancellation_token: CancellationToken, context: ResponderContext) -> AsyncGenerator[Message, None]:
         return self._async_response_generator(input_, cancellation_token, context)
